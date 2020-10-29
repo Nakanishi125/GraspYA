@@ -18,7 +18,7 @@
 using namespace std;
 
 
-double handcollision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm){
+double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm){
 
     map<int,string> bone_index;
     bone_index[0] = "ROOT";     bone_index[1] = "CP";       bone_index[2] = "TMCP";

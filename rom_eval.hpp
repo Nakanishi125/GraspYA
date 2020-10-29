@@ -18,7 +18,7 @@ double calc_distance(std::vector<std::vector<float>> xy, Vector2D pos_pos);
 
 void in_or_out(std::vector<std::vector<float>> xy, Vector2D pos_pos,int& inside_num,int& in_out);
 
-double rom_evaluation(dhArmature* arm);
+double rom_eval(dhArmature* arm);
 
 
 #endif

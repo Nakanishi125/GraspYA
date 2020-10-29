@@ -16,7 +16,7 @@
 #include "dhcontact.h"
 #include "segment.h"
 
-double handcollision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
+double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
 
 double hand_length(dhArmature* arm);
 

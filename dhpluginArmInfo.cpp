@@ -193,13 +193,33 @@ void dhArmOpe::Extract_maxmin(){
     DH_LOG("Completed!",0);
 }
 
+double dhArmOpe::RoM_evaluation(dhArmature* arm)
+{
+    return rom_eval(arm);
+}
+
+double dhArmOpe::Coordinate_evaluation(dhFeaturePoints* fp)
+{
+    return coord_eval(fp);
+}
+
+double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm)
+{
+    return collision_eval(mesh1,mesh2,arm);
+}
+
+void dhArmOpe::FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp,
+                                  dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2)
+{
+    FinalPostureCreate(arm,Fp,mesh1,mesh2);
+}
 
 QStringList dhArmOpe::ElementActionTitles()
 {
     QStringList sl=IDHElement::ElementActionTitles();
     sl<<"Get Bone Num"<<"Save Armature Info in File"<<"Save Armature Angle through MoCapSequence"
-     <<"Add Feature Point on the Body"<<"Extract max and min"<<"rom evaluation"<<"coordinate evaluation"
-    <<"collision evaluation"<<"FinalPostureCreate";
+     <<"Add Feature Point on the Body"<<"Extract max and min"<<"RoM evaluation"<<"Coordinate evaluation"
+    <<"Collision evaluation"<<"FinalPostureCreate";
     return sl;
 }
 
@@ -219,6 +239,7 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
             this->writeBoneNum(dynamic_cast<dhArmature*>(e));
         }
         return true;
+
     }else if(cmd=="Save Armature Info in File"){
         bool isOK;
         //Armatureをdialogで指定する
@@ -264,10 +285,12 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         }
 
     }
+
     else if(cmd == "Extract max and min"){
         this->Extract_maxmin();
     }
-    else if(cmd == "rom evaluation"){
+
+    else if(cmd == "RoM evaluation"){
         bool isOK;
         IDHElement* e=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
         dhArmature* arm = dynamic_cast<dhArmature*>(e);
@@ -275,15 +298,17 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         double rom_eva;
         clock_t time1,time2;
         time1 = clock();
-        rom_eva = rom_evaluation(arm);
+
+        rom_eva = this->RoM_evaluation(arm);
+
         time2 = clock();
         double etime = (double)(time2-time1)/1000;
-        DH_LOG("rom evaluation is "+QString::number(rom_eva,'f',5),0);
+        DH_LOG("RoM evaluation is "+QString::number(rom_eva,'f',5),0);
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
 
     }
 
-    else if(cmd == "coordinate evaluation"){
+    else if(cmd == "Coordinate evaluation"){
         bool isOK;
         IDHElement* e=dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK);
         dhFeaturePoints* Fp = dynamic_cast<dhFeaturePoints*>(e);
@@ -291,14 +316,16 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         float co_eva;
         clock_t time1,time2;
         time1 = clock();
-        co_eva = coord_eval(Fp);
-        DH_LOG("coordinate evaluation is "+QString::number(co_eva,'f',5),0);
+
+        co_eva = this->Coordinate_evaluation(Fp);
+
         time2 = clock();
         double etime = (double)(time2-time1)/1000;
+        DH_LOG("Coordinate evaluation is "+QString::number(co_eva,'f',5),0);
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
     }
 
-    else if(cmd == "collision evaluation"){
+    else if(cmd == "Collision evaluation"){
         bool isOK;
         IDHElement* e1 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK);
         dhSkeletalSubspaceDeformation* mesh1 = dynamic_cast<dhSkeletalSubspaceDeformation*>(e1);
@@ -310,10 +337,12 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         clock_t time1,time2;
         time1 = clock();
         double handcol_eva;
-        handcol_eva = handcollision_eval(mesh1, mesh2, arm);
-        DH_LOG("handcollision evaluation is "+QString::number(handcol_eva,'f',8),0);
+
+        handcol_eva = this->Collision_evaluation(mesh1, mesh2, arm);
+
         time2 = clock();
         double etime = (double)(time2-time1)/1000;
+        DH_LOG("Collision evaluation is "+QString::number(handcol_eva,'f',8),0);
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
     }
 
@@ -330,106 +359,11 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK);
         dhMesh* mesh2 = dynamic_cast<dhMesh*>(e4);
 
-
-        map<int,QString> bone_list;
-        bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
-        bone_list[3] = "TDP";      bone_list[4] = "IPP";    bone_list[5] = "IMP";
-        bone_list[6] = "IDP";      bone_list[7] = "MPP";    bone_list[8] = "MMP";
-        bone_list[9] = "MDP";      bone_list[10] = "RMCP";  bone_list[11] = "RPP";
-        bone_list[12] = "RMP";     bone_list[13] = "RDP";   bone_list[14] = "PMCP";
-        bone_list[15] = "PPP";     bone_list[16] = "PMP";   bone_list[17] = "PDP";
-
-        vector<double> init;
-        for(int l=0; l<bone_list.size(); l++){
-            if(bone_list[l] == "ROOT"){
-                dhMat44 trans_mat = arm->bone(bone_list[l])->R;
-                dhMat33 rot_mat = trans_mat.toMat33();
-                vector<double> angle = Rot2Euler(rot_mat);
-
-                init.push_back(angle[0]);
-                init.push_back(angle[1]);
-                init.push_back(angle[2]);
-                init.push_back(trans_mat[12]);
-                init.push_back(trans_mat[13]);
-                init.push_back(trans_mat[14]);
-            }
-            else if(bone_list[l] == "TMCP" || bone_list[l] == "IPP" || bone_list[l] == "MPP"
-                    || bone_list[l] == "RPP" || bone_list[l] == "PPP"){
-                dhMat44 trans_mat = arm->bone(bone_list[l])->R;
-                dhMat33 rot_mat = trans_mat.toMat33();
-                vector<double> angle = Rot2Euler(rot_mat);
-
-                init.push_back(angle[0]);
-                init.push_back(angle[1]);
-                init.push_back(angle[2]);
-            }
-            else{
-                dhMat44 trans_mat = arm->bone(bone_list[l])->R;
-                dhMat33 rot_mat = trans_mat.toMat33();
-                vector<double> angle = Rot2Euler(rot_mat);
-
-                init.push_back(angle[0]);
-            }
-        }
-
-//=======================
-//ここからGSLによる最適化
-//=======================
-        size_t iter = 0;
-        int status;
-        double size;
-
-        Parameter p = { 70, 2, 30000, arm, Fp, mesh1, mesh2};            //func_estimateのパラメータ
-
-        const gsl_multimin_fminimizer_type *T;      //必要ないろいろ宣言
-        gsl_multimin_fminimizer *s = NULL;
-        gsl_vector *x, *ss;
-        gsl_multimin_function my_func;
-
-        ss = gsl_vector_alloc(init.size());         //初期頂点の大きさのベクトル
-        gsl_vector_set_all(ss, 30);                //ステップ幅の初期値は30
-
-        x = gsl_vector_alloc(init.size());
-        for(int index=0; index<init.size(); index++){       //initの変数数繰り返して開始点代入
-            gsl_vector_set(x,index,init[index]);
-        }
-
-        my_func.f = &func_estimate;
-        my_func.n = x->size;
-        my_func.params = (void *)(&p);
-
-        T = gsl_multimin_fminimizer_nmsimplex;      //Nelder-meadのシンプレックス法を用いる
-        s = gsl_multimin_fminimizer_alloc(T,x->size);
-        gsl_multimin_fminimizer_set(s, &my_func, x, ss);
-
-        do{
-            iter++;
-            status = gsl_multimin_fminimizer_iterate(s);
-            if(status)  break;
-
-            size = gsl_multimin_fminimizer_size(s);
-            status = gsl_multimin_test_size(size,1);        //重心と各頂点の平均距離が1以内
-
-            if(status == GSL_SUCCESS){
-                DH_LOG("Converged to minimum at",0);
-            }
-
-        }while(status == GSL_CONTINUE && iter < 30000);
-
-
-        estimate_armature_change(s->x,arm,Fp,mesh1,mesh2);
-        dhApp::updateAllWindows();
-        DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
-
-        gsl_vector_free(x);
-        gsl_vector_free(ss);
-        gsl_multimin_fminimizer_free(s);
+        this->FinalPosture_create(arm,Fp,mesh1,mesh2);
 
         time2 = clock();
         double etime = (double)(time2-time1)/1000;
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
-
-        return status;
 
     }
 

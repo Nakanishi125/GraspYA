@@ -64,8 +64,8 @@ double func_estimate(const gsl_vector *v,void *params){
     Parameter *dp = (Parameter*)params;
     estimate_armature_change(v,dp->arm, dp->Fp, dp->mesh1, dp->mesh2);
     //　評価関数定義
-    double estimate_func = dp->par1*coord_eval(dp->Fp) + dp->par2*rom_evaluation(dp->arm)
-                            + dp->par3*handcollision_eval(dp->mesh1, dp->mesh2, dp->arm);
+    double estimate_func = dp->par1*coord_eval(dp->Fp) + dp->par2*rom_eval(dp->arm)
+                            + dp->par3*collision_eval(dp->mesh1, dp->mesh2, dp->arm);
 
     return estimate_func;
 }
@@ -159,5 +159,106 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
     Fp->Update();
     mesh1->Update();
     mesh2->Update();
+
+}
+
+int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
+                       dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2)
+{
+    map<int,QString> bone_list;
+    bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
+    bone_list[3] = "TDP";      bone_list[4] = "IPP";    bone_list[5] = "IMP";
+    bone_list[6] = "IDP";      bone_list[7] = "MPP";    bone_list[8] = "MMP";
+    bone_list[9] = "MDP";      bone_list[10] = "RMCP";  bone_list[11] = "RPP";
+    bone_list[12] = "RMP";     bone_list[13] = "RDP";   bone_list[14] = "PMCP";
+    bone_list[15] = "PPP";     bone_list[16] = "PMP";   bone_list[17] = "PDP";
+
+    vector<double> init;
+    for(int l=0; l<bone_list.size(); l++){
+        if(bone_list[l] == "ROOT"){
+            dhMat44 trans_mat = arm->bone(bone_list[l])->R;
+            dhMat33 rot_mat = trans_mat.toMat33();
+            vector<double> angle = Rot2Euler(rot_mat);
+
+            init.push_back(angle[0]);
+            init.push_back(angle[1]);
+            init.push_back(angle[2]);
+            init.push_back(trans_mat[12]);
+            init.push_back(trans_mat[13]);
+            init.push_back(trans_mat[14]);
+        }
+        else if(bone_list[l] == "TMCP" || bone_list[l] == "IPP" || bone_list[l] == "MPP"
+                || bone_list[l] == "RPP" || bone_list[l] == "PPP"){
+            dhMat44 trans_mat = arm->bone(bone_list[l])->R;
+            dhMat33 rot_mat = trans_mat.toMat33();
+            vector<double> angle = Rot2Euler(rot_mat);
+
+            init.push_back(angle[0]);
+            init.push_back(angle[1]);
+            init.push_back(angle[2]);
+        }
+        else{
+            dhMat44 trans_mat = arm->bone(bone_list[l])->R;
+            dhMat33 rot_mat = trans_mat.toMat33();
+            vector<double> angle = Rot2Euler(rot_mat);
+
+            init.push_back(angle[0]);
+        }
+    }
+
+//=======================
+//ここからGSLによる最適化
+//=======================
+    size_t iter = 0;
+    int status;
+    double size;
+
+    Parameter p = { 70, 2, 30000, arm, Fp, mesh1, mesh2};            //func_estimateのパラメータ
+
+    const gsl_multimin_fminimizer_type *T;      //必要ないろいろ宣言
+    gsl_multimin_fminimizer *s = NULL;
+    gsl_vector *x, *ss;
+    gsl_multimin_function my_func;
+
+    ss = gsl_vector_alloc(init.size());         //初期頂点の大きさのベクトル
+    gsl_vector_set_all(ss, 30);                //ステップ幅の初期値は30
+
+    x = gsl_vector_alloc(init.size());
+    for(int index=0; index<init.size(); index++){       //initの変数数繰り返して開始点代入
+        gsl_vector_set(x,index,init[index]);
+    }
+
+    my_func.f = &func_estimate;
+    my_func.n = x->size;
+    my_func.params = (void *)(&p);
+
+    T = gsl_multimin_fminimizer_nmsimplex;      //Nelder-meadのシンプレックス法を用いる
+    s = gsl_multimin_fminimizer_alloc(T,x->size);
+    gsl_multimin_fminimizer_set(s, &my_func, x, ss);
+
+    do{
+        iter++;
+        status = gsl_multimin_fminimizer_iterate(s);
+        if(status)  break;
+
+        size = gsl_multimin_fminimizer_size(s);
+        status = gsl_multimin_test_size(size,1);        //重心と各頂点の平均距離が1以内
+
+        if(status == GSL_SUCCESS){
+            DH_LOG("Converged to minimum at",0);
+        }
+
+    }while(status == GSL_CONTINUE && iter < 30000);
+
+
+    estimate_armature_change(s->x,arm,Fp,mesh1,mesh2);
+    dhApp::updateAllWindows();
+    DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
+
+    gsl_vector_free(x);
+    gsl_vector_free(ss);
+    gsl_multimin_fminimizer_free(s);
+
+    return status;
 
 }

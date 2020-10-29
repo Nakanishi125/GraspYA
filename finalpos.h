@@ -38,4 +38,7 @@ double func_estimate(const gsl_vector *v,void *params);
 void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoints *Fp,
                               dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2);
 
+int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
+                       dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2);
+
 #endif // FINALPOS_H

@@ -127,7 +127,7 @@ float coord_eval(dhFeaturePoints* Fp){
 
 //    DH_LOG("estimate_length is "+QString::number(estimate_length,'f',6),0);
 //    DH_LOG("estimate_rad is "+QString::number(estimate_rad,'f',6),0);
-//    DH_LOG("coordinate_evaluation is "+QString::number(eval,'f',6),0);
+
     return eval;
 }
 
