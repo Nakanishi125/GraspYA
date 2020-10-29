@@ -1,6 +1,7 @@
 #include<iostream>
 #include<fstream>
 #include<vector>
+#include<time.h>
 #include<sstream>
 #include<cmath>
 #include<cstring>
@@ -119,12 +120,10 @@ void in_or_out(vector<vector<double>> xy, Vector2D pos_pos,int& inside_num,int& 
 	}
 }
 
-double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
-//double rom_evaluation(){
+double rom_evaluation(dhArmature* arm){
     QString bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
 //    string bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
 
-//    string extension = ".csv";
 	vector<vector<string>> rotation;
     double min_length_sum = 0.0;
 
@@ -132,7 +131,7 @@ double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
     for(int boneIndex=0; boneIndex < sizeof(bones)/sizeof(bones[0]); boneIndex++){
         dhBone *bone = arm->bone(bones[boneIndex]);
         dhVec4 r[2];
-        dhMat44 mat=bone->R;
+        dhMat44 mat=bone->R;        //初期姿勢→現在姿勢の変換行列
         mat.getRPYAngle(r[0],r[1]); //解が二つ出るが，ここでは0の方のみ書き出すことにする
         double deg_x = r[0].p[0] / (3.141592) * 180.0;
         double deg_y = r[0].p[1] / (3.141592) * 180.0;
@@ -186,15 +185,10 @@ double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
 //        deg_x = theta_x/M_PI*180;
 //        deg_y = theta_y/M_PI*180;
 //        deg_z = theta_z/M_PI*180;
- 
-/*  		cout << "deg_x:" << deg_x << endl;
-        cout << "deg_y:" << deg_y << endl;
-        cout << "deg_z:" << deg_z << endl; */
 
 		vector<string> line;
 
         line.push_back(bones[boneIndex].toStdString());
-//        line.push_back(bones[ii]);
 		line.push_back(to_string(deg_x));
 		line.push_back(to_string(deg_y));
 		line.push_back(to_string(deg_z));
@@ -250,15 +244,6 @@ double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
 
 	joint_bone.erase(joint_bone.begin());
 
-	/* for(int row=0; row < joint_bone.size(); row++){		//Matrixの中を見る
-		vector<string> rec = joint_bone[row];
-		for(int col=0; col < rec.size(); col++){
-			cout << rec[col];
-			if(col < rec.size() -1)	cout << ",";
-		}
-			cout << endl;
-	} */
-
 // ***********************************************************************************************
 
 	for(int i=0; i<joints_list.size(); i++){
@@ -286,7 +271,6 @@ double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
 			}
 		} 
 
-//		cout << rot1 << "," << rot2 << endl;
 
 		Vector2D position_pos(rot1,rot2);
 //        DH_LOG(QString::number(rot1,'f',2)+" , "+QString::number(rot2,'f',2),0);      //clear
@@ -297,7 +281,6 @@ double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
 		vector<vector<string>> ashape_string;
         vector<vector<double>> ashape;
 
-//		cout << ashape_file << endl;
 		Csv obj_ashape(ashape_file);
 		if(!obj_ashape.getCsv(ashape_string)){
 			cout << "cannot read" << endl;
@@ -359,41 +342,32 @@ double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
 	}
 
 //*******************************************************************************************
-    string add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01.csv";
-	vector<vector<string>> DF;
+//    string add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01.csv";
+//	vector<vector<string>> DF;
 
-	Csv objDF(add);
-	if(!objDF.getCsv(DF)){
-		cout << "cannot read" << endl;
-		return 1;
-	}
+//	Csv objDF(add);
+//	if(!objDF.getCsv(DF)){
+//		cout << "cannot read" << endl;
+//		return 1;
+//	}
 
-/* 	for(int row=0; row < DF.size(); row++){		//Matrixの中を見る
-		vector<string> rec = DF[row];
-		for(int col=0; col < rec.size(); col++){
-			cout << rec[col];
-			if(col < rec.size() -1)	cout << ",";
-		}
-			cout << endl;
-	} */
+    string add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";
+    vector<vector<string>> DF;
+
+    Csv objDF(add);
+    if(!objDF.getCsv(DF)){
+        cout << "cannot read" << endl;
+        return 1;
+    }
 
     for(int col=0; col<joint_bone.size(); col++){
         double min_length;
         double buf,min,max,rot;
 
-        for(int col2=0; col2<DF[0].size(); col2++){         //max and min
-            if(joint_bone[col][0] == DF[0][col2]){
-                for(int row=1; row<DF.size(); row++){
-                    buf = stof(DF[row][col2]);
-                    if(row == 1){
-                        min = buf;
-                        max = buf;
-                    }
-                    else{
-                        if(min>buf)	min=buf;
-                        if(max<buf)	max=buf;
-                    }
-                }
+        for(int col2=0; col2<DF.size(); col2++){         //max and min
+            if(joint_bone[col][0] == DF[col2][0]){
+                max = stof(DF[col2][1]);
+                min = stof(DF[col2][2]);
             }
         }
 
@@ -408,11 +382,6 @@ double rom_evaluation(dhArmature* arm){		//同次変換行列から角度算出
                 rot = stof(rotation[ii][axis+1]);
             }
         }
-
-        /* cout << "max=" << max << endl;
-        cout << "min=" << min << endl;
-        cout << "rot=" << rot << endl;
-        cout << endl; */
 	
         double ave = (max + min)/2;
 

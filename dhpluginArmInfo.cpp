@@ -4,6 +4,9 @@
 #include<cmath>
 #include<time.h>
 #include<stdlib.h>
+#include <string>
+#include <fstream>
+#include <sstream>
 
 
 #include <QtGui>
@@ -19,6 +22,7 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl/impl/point_types.hpp>
 
+#include "csv.hpp"
 #include "rom_eval.hpp"
 #include "coordinate_eval.hpp"
 #include "collision_eval.hpp"
@@ -153,13 +157,49 @@ void dhArmOpe::PlotGivenPointTrajectory(dhMoCapSequence *mocap, dhFeaturePoints 
     }
 }
 
+void dhArmOpe::Extract_maxmin(){
+//莫大なデータ量のassembledActiveDF01.csvから必要な最大最小値を先に取り出しておく関数
+
+    string in = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01.csv";   //元ファイル
+    string out = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";   //抜き出し先ファイル
+    vector<vector<string>> DF;
+    double buf,min,max;
+
+    Csv objDF(in);
+    if(!objDF.getCsv(DF)){
+        cout << "cannot read" << endl;
+        return;
+    }
+
+    ofstream ofs_output(out);
+
+    for(int col=2; col<DF[0].size()-2; col++){     //max and min, assembledActiveDF01.csvのデータは3列目からAU列まで
+        ofs_output << DF[0][col] << ',';
+        for(int row=1; row<DF.size(); row++){
+            buf = stof(DF[row][col]);
+            if(row == 1){
+                min = buf;
+                max = buf;
+            }
+            else{
+                if(min>buf)	min=buf;
+                if(max<buf)	max=buf;
+            }
+        }
+        ofs_output << max << ',';
+        ofs_output << min << std::endl;
+    }
+
+    DH_LOG("Completed!",0);
+}
+
 
 QStringList dhArmOpe::ElementActionTitles()
 {
     QStringList sl=IDHElement::ElementActionTitles();
     sl<<"Get Bone Num"<<"Save Armature Info in File"<<"Save Armature Angle through MoCapSequence"
-     <<"Add Feature Point on the Body"<<"rom evaluation"<<"coordinate evaluation"<<"collision evaluation"
-    <<"FinalPostureCreate";
+     <<"Add Feature Point on the Body"<<"Extract max and min"<<"rom evaluation"<<"coordinate evaluation"
+    <<"collision evaluation"<<"FinalPostureCreate";
     return sl;
 }
 
@@ -223,6 +263,9 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
             return true;
         }
 
+    }
+    else if(cmd == "Extract max and min"){
+        this->Extract_maxmin();
     }
     else if(cmd == "rom evaluation"){
         bool isOK;
@@ -355,7 +398,7 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         my_func.n = x->size;
         my_func.params = (void *)(&p);
 
-        T = gsl_multimin_fminimizer_nmsimplex;
+        T = gsl_multimin_fminimizer_nmsimplex;      //Nelder-meadのシンプレックス法を用いる
         s = gsl_multimin_fminimizer_alloc(T,x->size);
         gsl_multimin_fminimizer_set(s, &my_func, x, ss);
 
@@ -381,20 +424,6 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         gsl_vector_free(x);
         gsl_vector_free(ss);
         gsl_multimin_fminimizer_free(s);
-
-//---------------------
-//後で消す
-//---------------------
-        double rom_eva,co_eva,coll_eva;
-        rom_eva = rom_evaluation(p.arm);
-        co_eva = coord_eval(p.Fp);
-        coll_eva = handcollision_eval(p.mesh1, p.mesh2, p.arm);
-        DH_LOG("rom is "+QString::number(rom_eva),0);
-        DH_LOG("coord is "+QString::number(co_eva),0);
-        DH_LOG("handcoll is "+QString::number(coll_eva),0);
-        double func = 70*co_eva + 2*rom_eva + 30000*coll_eva;
-        DH_LOG("finalPos(confirm) is "+QString::number(func),0);
-//ここまで消す-------------------------------------------------------------
 
         time2 = clock();
         double etime = (double)(time2-time1)/1000;
