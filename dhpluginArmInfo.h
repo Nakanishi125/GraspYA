@@ -56,7 +56,7 @@ public slots:
     void saveArmInfo(dhArmature *arm, QString IFname);
     void saveArmInfoinMoCapSequence(dhArmature *arm, dhMoCapSequence *seq, QString OFname);
     void PlotGivenPointTrajectory(dhMoCapSequence *mocap, dhFeaturePoints *fp, QString FPName);
-    void Extract_maxmin();
+    void Extract_maxmin(QString in);
     double RoM_evaluation(dhArmature* arm);
     double Coordinate_evaluation(dhFeaturePoints* Fp);
     double Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);

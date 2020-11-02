@@ -157,26 +157,27 @@ void dhArmOpe::PlotGivenPointTrajectory(dhMoCapSequence *mocap, dhFeaturePoints 
     }
 }
 
-void dhArmOpe::Extract_maxmin(){
+void dhArmOpe::Extract_maxmin(QString in){
 //莫大なデータ量のassembledActiveDF01.csvから必要な最大最小値を先に取り出しておく関数
 
-    string in = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01.csv";   //元ファイル
-    string out = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";   //抜き出し先ファイル
-    vector<vector<string>> DF;
+    vector<vector<QString>> DF;
     double buf,min,max;
 
     Csv objDF(in);
-    if(!objDF.getCsv(DF)){
-        cout << "cannot read" << endl;
-        return;
+    objDF.getCsv(DF);
+
+    QString out = in.remove(".csv") + "_maxmin.csv";;   //抜き出し先ファイル
+
+    QFile opfile(out);
+    if(!opfile.open(QIODevice::WriteOnly)){
+        DH_LOG("cannot open the output file",0);
     }
 
-    ofstream ofs_output(out);
+    QTextStream op(&opfile);
 
     for(int col=2; col<DF[0].size()-2; col++){     //max and min, assembledActiveDF01.csvのデータは3列目からAU列まで
-        ofs_output << DF[0][col] << ',';
         for(int row=1; row<DF.size(); row++){
-            buf = stof(DF[row][col]);
+            buf = DF[row][col].toDouble();
             if(row == 1){
                 min = buf;
                 max = buf;
@@ -186,10 +187,34 @@ void dhArmOpe::Extract_maxmin(){
                 if(max<buf)	max=buf;
             }
         }
-        ofs_output << max << ',';
-        ofs_output << min << std::endl;
+
+        op << DF[0][col] << ',';
+        op << max << ',';
+        op << min << '\n';
     }
 
+//以下，QStringを用いたものに書き換えたため不要（念のため，残しておく）=============================================================
+
+//    ofstream ofs_output(out);
+
+//    for(int col=2; col<DF[0].size()-2; col++){     //max and min, assembledActiveDF01.csvのデータは3列目からAU列まで
+//        ofs_output << DF[0][col] << ',';
+//        for(int row=1; row<DF.size(); row++){
+//            buf = stof(DF[row][col]);
+//            if(row == 1){
+//                min = buf;
+//                max = buf;
+//            }
+//            else{
+//                if(min>buf)	min=buf;
+//                if(max<buf)	max=buf;
+//            }
+//        }
+//        ofs_output << max << ',';
+//        ofs_output << min << std::endl;
+//    }
+
+//================================================================================================================
     DH_LOG("Completed!",0);
 }
 
@@ -287,7 +312,11 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
     }
 
     else if(cmd == "Extract max and min"){
-        this->Extract_maxmin();
+
+        QString DF = QFileDialog::getOpenFileName(nullptr,"Input CSV file name","","csv (*.csv)");
+        this->Extract_maxmin(DF);
+
+        return true;
     }
 
     else if(cmd == "RoM evaluation"){
@@ -306,6 +335,7 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         DH_LOG("RoM evaluation is "+QString::number(rom_eva,'f',5),0);
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
 
+        return true;
     }
 
     else if(cmd == "Coordinate evaluation"){
@@ -323,6 +353,8 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         double etime = (double)(time2-time1)/1000;
         DH_LOG("Coordinate evaluation is "+QString::number(co_eva,'f',5),0);
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+
+        return true;
     }
 
     else if(cmd == "Collision evaluation"){
@@ -344,6 +376,8 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         double etime = (double)(time2-time1)/1000;
         DH_LOG("Collision evaluation is "+QString::number(handcol_eva,'f',8),0);
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+
+        return true;
     }
 
     else if(cmd == "FinalPostureCreate"){
@@ -365,6 +399,7 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         double etime = (double)(time2-time1)/1000;
         DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
 
+        return true;
     }
 
 

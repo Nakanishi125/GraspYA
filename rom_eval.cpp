@@ -67,13 +67,17 @@ void in_or_out(vector<vector<double>> xy, Vector2D pos_pos,int& inside_num,int& 
 		Vector2D position_edge1(xy[l1][0],xy[l1][1]);
 		Vector2D position_edge2(xy[l2][0],xy[l2][1]);
 
+//============================
+//Crossing Number Algorithm
+//============================
+
 		if(position_edge1.x != position_edge2.x){
 			Vector2D min = position_edge1.x < position_edge2.x ? position_edge1 : position_edge2;
 			Vector2D max = position_edge1.x > position_edge2.x ? position_edge1 : position_edge2;
 
-			if(min.x < pos_pos.x && pos_pos.x < max.x){				
+            if(min.x < pos_pos.x && pos_pos.x < max.x){		//x方向に見て，対象辺内に現在点がある
 				if( (position_edge1.y+(position_edge2.y-position_edge1.y)/(position_edge2.x-position_edge1.x)
-						*(pos_pos.x-position_edge1.x)-pos_pos.y) > 0){
+                        *(pos_pos.x-position_edge1.x)-pos_pos.y) > 0){  //yが増える方向に探索
 					inside_num++;
 				}
 				else if((position_edge1.y+(position_edge2.y-position_edge1.y)/(position_edge2.x-position_edge1.x)
@@ -81,28 +85,34 @@ void in_or_out(vector<vector<double>> xy, Vector2D pos_pos,int& inside_num,int& 
 					in_out = 0;
 				}
 			}
-			else if(pos_pos.x == position_edge2.x){
-				if(pos_pos.y < position_edge2.y){
-					if(position_edge1.x > position_edge2.x){
-						inside_num++;
+            else if(pos_pos.x == position_edge2.x){
+                if(pos_pos.y < position_edge2.y){
+                    if(position_edge1.x > position_edge2.x){    //rule1:左向きの矢印の場合，
+                        inside_num++;                           //      開始点を含まず，終着点を含む
 					}
+//                    else if(position_edge1.x < position_edge2.x){
+//                        //rule2:右向きの矢印の場合，開始点を含み，終着点を含まない．
+//                    }
 				}
-				else if(pos_pos.y == position_edge2.y){
-					in_out = 0;
+                else if(pos_pos.y == position_edge2.y){
+                    in_out = 0;
 				}
 			}
-			else if(pos_pos.x == position_edge1.x){
-				if(pos_pos.y < position_edge1.y){
-					if(position_edge1.x < position_edge2.x){
-						inside_num++;
+            else if(pos_pos.x == position_edge1.x){
+                if(pos_pos.y < position_edge1.y){
+                    if(position_edge1.x < position_edge2.x){    //rule2:右向き矢印の場合，
+                        inside_num++;                           //      開始点を含み，終着点を含まない
 					}
+//                    else if(position_edge1.x > position_edge2.x){
+//                        //rule1:左向きの矢印の場合，開始点を含まず，終着点を含む
+//                    }
 				}
 				else if(pos_pos.y == position_edge1.y){
 					in_out = 0;
 				}
 			}
 		}
-		else{
+        else{   //yが増える方向への探索線と辺が平行で重なる場合，交差数は増えない
 			if(pos_pos.x == position_edge1.x){
 				Vector2D min2 = position_edge1.y < position_edge2.y ? position_edge1 : position_edge2;
 				Vector2D max2 = position_edge1.y > position_edge2.y ? position_edge1 : position_edge2;
@@ -112,12 +122,16 @@ void in_or_out(vector<vector<double>> xy, Vector2D pos_pos,int& inside_num,int& 
 			}
 		}	
 
+
+
 	}
 }
 
 double rom_eval(dhArmature* arm){
     QString bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
 //    string bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
+    clock_t t1,t2,t3,t4,t5,t6,t7,t8;
+    t1 = clock();
 
 	vector<vector<string>> rotation;
     double min_length_sum = 0.0;
@@ -151,6 +165,10 @@ double rom_eval(dhArmature* arm){
         rotation.push_back(line);       //骨別の現在の関節角度
 
 	}
+
+    t2 = clock();
+    double etime = (double)(t2-t1)/1000;
+    DH_LOG("section1 is "+QString::number(etime,'f',5),0);
 
 
 // ********************************************************************************************
@@ -192,7 +210,12 @@ double rom_eval(dhArmature* arm){
 
 // ***********************************************************************************************
 
+    t3 = clock();
+    etime = (double)(t3-t2)/1000;
+    DH_LOG("section2 is "+QString::number(etime,'f',5),0);
+
 	for(int i=0; i<joints_list.size(); i++){
+        t5 = clock();
 		string joint1 = joints_list[i][0];
 		string joint2 = joints_list[i][1];
 
@@ -215,8 +238,11 @@ double rom_eval(dhArmature* arm){
 					}
 				}
 			}
-		} 
+        }
 
+        t6 = clock();
+        etime = (double)(t6-t5)/1000;
+        DH_LOG("subsec1 is "+QString::number(etime,'f',5),0);
 
         Vector2D position_pos(rot1,rot2);   //joints_listによって定められた関節の組み合わせに応じて
                                             //現在の関節角度組み合わせを定義する．
@@ -254,6 +280,9 @@ double rom_eval(dhArmature* arm){
        		}
         	cout << endl;
     	} */
+        t7 = clock();
+        etime = (double)(t7-t6)/1000;
+        DH_LOG("subsec2 is "+QString::number(etime,'f',5),0);
 
         double min_pos_to_edge_length;
 
@@ -284,10 +313,18 @@ double rom_eval(dhArmature* arm){
 			}
 		}
 
+        t8 = clock();
+        etime = (double)(t8-t7)/1000;
+        DH_LOG("subsec3 is "+QString::number(etime,'f',5),0);
+
 		min_length_sum += min_length * min_length;
+
 //        DH_LOG("min_length_sum= "+QString::number(min_length_sum,'f',2),0);       //clear
 
 	}
+    t4 = clock();
+    etime = (double)(t4-t3)/1000;
+    DH_LOG("section3 is "+QString::number(etime,'f',5),0);
 
 //===================================
 //先にassembledActiveDF01.csvから
@@ -305,7 +342,7 @@ double rom_eval(dhArmature* arm){
 
     for(int col=0; col<joint_bone.size(); col++){
         double min_length;
-        double buf,min,max,rot;
+        double min,max,rot;
 
         for(int col2=0; col2<DF.size(); col2++){
             if(joint_bone[col][0] == DF[col2][0]){
@@ -350,6 +387,10 @@ double rom_eval(dhArmature* arm){
 		min_length_sum += min_length * min_length;
 
 	} 
+
+    t5 = clock();
+    etime = (double)(t5-t4)/1000;
+    DH_LOG("section4 is "+QString::number(etime,'f',5),0);
 
     double Rom_eval = min_length_sum/(30+25);
 //    DH_LOG("Rom evaluation is "+QString::number(Rom_eval,'f',5),0);

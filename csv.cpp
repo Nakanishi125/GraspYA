@@ -5,10 +5,19 @@
 #include<sstream>
 #include"csv.hpp"
 
+#include<QString>
+#include<QFile>
+#include<QTextStream>
+#include<QList>
+
 using namespace std;
 
 Csv::Csv(string name){
    this -> Csv_file = name;
+}
+
+Csv::Csv(QString qname){
+    this -> Csv_file2 = qname;
 }
 
 bool Csv::getCsv(vector<vector<string>>& mat, const char delim){
@@ -30,6 +39,30 @@ bool Csv::getCsv(vector<vector<string>>& mat, const char delim){
         }
     }
     
+    return true;
+}
+
+bool Csv::getCsv(vector<vector<QString>>& mat, const char delim){
+    QFile file(Csv_file2);
+
+    if(!file.open(QIODevice::ReadOnly)){
+        DH_LOG("cannot open the input file",0);
+        return false;
+    }
+
+    QTextStream in(&file);
+    while(!in.atEnd()){
+        QString tmp = in.readLine();
+        vector<QString> tmpMat;
+        QStringList tmplst = tmp.split(',');
+        for(int index=0;index<tmplst.size();index++){
+            tmpMat.push_back(tmplst[index]);
+        }
+        mat.push_back(tmpMat);
+    }
+
+    file.close();
+
     return true;
 }
 

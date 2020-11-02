@@ -29,16 +29,17 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     bone_index[15] = "RMP";     bone_index[16] = "RDP";     bone_index[17] = "PMCP";
     bone_index[18] = "PPP";     bone_index[19] = "PMP";     bone_index[20] = "PDP";
 
-    int points1 = 10000;
-    int points2 = 10000;
-
     double size = hand_length(arm);
 //    DH_LOG("hand length is" + QString::number(size),0);
 
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
 
-    computeContactRegion(bodyPoints,objectPoints,mesh1,mesh2,points1,points2);
+    DH_LOG("the number of Mesh1 is"+QString::number(mesh1->PointCount()),0);
+    DH_LOG("the number of Mesh2 is"+QString::number(mesh2->PointCount()),0);
+    dhVertex* vertex = mesh1->Vi(0);
+
+    computeContactRegion(bodyPoints,objectPoints,mesh1,mesh2);
 
     dhBone* root;
     root = dhnew<dhBone>();

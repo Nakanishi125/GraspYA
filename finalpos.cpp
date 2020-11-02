@@ -245,7 +245,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
         status = gsl_multimin_test_size(size,1);        //重心と各頂点の平均距離が1以内
 
         if(status == GSL_SUCCESS){
-            DH_LOG("Converged to minimum at",0);
+            DH_LOG("iter is "+QString::number(iter),0);
         }
 
     }while(status == GSL_CONTINUE && iter < 30000);

@@ -12,7 +12,7 @@
 void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,
                           dhPointCloudAsVertexRef*& contactPoints2,
                           dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2,
-                          int points1=50000,int points2=50000,double tolIn=10.0,double tolOut=1.0);
+                          double tolIn=10.0,double tolOut=1.0);
 
 void getArmatureStructure(dhArmature* arm,vector<QString>& bones,vector<int>& depths,dhBone* root=NULL);
 

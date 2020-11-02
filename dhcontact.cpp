@@ -12,17 +12,18 @@
 #include "segment.h"
 
 
-void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,
-                          dhPointCloudAsVertexRef*& contactPoints2,dhSkeletalSubspaceDeformation* mesh1,
-                          dhMesh* mesh2,int points1,int points2,double tolIn,double tolOut){
+void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,dhPointCloudAsVertexRef*& contactPoints2,
+                          dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2,double tolIn,double tolOut){
 
     dhCollisionDetection::Desc cdesc;
     cdesc.pc[0] = mesh1;  cdesc.pc[1] = mesh2;
-    cdesc.pcCol[0] = contactPoints1;  cdesc.pcCol[1] = contactPoints2;
-    cdesc.createContactPointCloud[0] = false;
-    cdesc.createContactPointCloud[1] = false;
-    cdesc.tolIn = tolIn;    cdesc.tolOut = tolOut;
 
+    //あらかじめPointCloudを入れる変数を用意し，これを上書きしてもらう形をとる
+    cdesc.pcCol[0] = contactPoints1;  cdesc.pcCol[1] = contactPoints2;
+
+    cdesc.createContactPointCloud[0] = false;   //dhCollisionDetection内でPointCloudを作るかどうか(True or False)
+    cdesc.createContactPointCloud[1] = false;   //Trueは作る，Falseは作らない
+    cdesc.tolIn = tolIn;    cdesc.tolOut = tolOut;
 
     dhCollisionDetection* collision;
     collision = dhnew<dhCollisionDetection>();
