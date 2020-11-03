@@ -313,13 +313,14 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
 
     else if(cmd == "Extract max and min"){
 
-        QString DF = QFileDialog::getOpenFileName(nullptr,"Input CSV file name","","csv (*.csv)");
+        QString DF = QFileDialog::getOpenFileName(nullptr,"Input CSV file name","","csv(*.csv)");
         this->Extract_maxmin(DF);
 
         return true;
     }
 
     else if(cmd == "RoM evaluation"){
+
         bool isOK;
         IDHElement* e=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
         dhArmature* arm = dynamic_cast<dhArmature*>(e);

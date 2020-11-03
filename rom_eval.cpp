@@ -15,13 +15,15 @@
 
 using namespace std;
 
-double calc_distance(vector<vector<double>> xy, Vector2D pos_pos){
+
+double calc_distance(vector<Vector2D> xy, Vector2D pos_pos){
     double min_pos_to_edge_length;
 
 	for(int m1=0; m1<xy.size()-2; m1++){
 		int m2 = m1 + 1;
-		Vector2D position_edge1(xy[m1][0],xy[m1][1]);
-		Vector2D position_edge2(xy[m2][0],xy[m2][1]);
+
+        Vector2D position_edge1 = xy[m1];
+        Vector2D position_edge2 = xy[m2];
 
 		Vector2D u = position_edge2 - position_edge1;
 		Vector2D v = pos_pos - position_edge1;
@@ -61,11 +63,13 @@ double calc_distance(vector<vector<double>> xy, Vector2D pos_pos){
 	return min_pos_to_edge_length;
 }
 
-void in_or_out(vector<vector<double>> xy, Vector2D pos_pos,int& inside_num,int& in_out){
+
+void in_or_out(vector<Vector2D> xy, Vector2D pos_pos,int& inside_num,int& in_out){
 	for(int l1=0; l1<xy.size()-2; l1++){
 		int l2 = l1 + 1;
-		Vector2D position_edge1(xy[l1][0],xy[l1][1]);
-		Vector2D position_edge2(xy[l2][0],xy[l2][1]);
+
+        Vector2D position_edge1 = xy[l1];
+        Vector2D position_edge2 = xy[l2];
 
 //============================
 //Crossing Number Algorithm
@@ -130,8 +134,8 @@ void in_or_out(vector<vector<double>> xy, Vector2D pos_pos,int& inside_num,int& 
 double rom_eval(dhArmature* arm){
     QString bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
 //    string bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
-    clock_t t1,t2,t3,t4,t5,t6,t7,t8;
-    t1 = clock();
+//    clock_t t1,t2,t3,t4,t5,t6,t7,t8;
+//    t1 = clock();
 
 	vector<vector<string>> rotation;
     double min_length_sum = 0.0;
@@ -142,18 +146,11 @@ double rom_eval(dhArmature* arm){
         dhVec4 r[2];
         dhMat44 mat=bone->R;        //初期姿勢→現在姿勢の変換行列
         mat.getRPYAngle(r[0],r[1]); //解が二つ出るが，ここでは0の方のみ書き出すことにする
+
         double deg_x = r[0].p[0] / (3.141592) * 180.0;
         double deg_y = r[0].p[1] / (3.141592) * 180.0;
         double deg_z = r[0].p[2] / (3.141592) * 180.0;
 
-        QString deg_xx = QString::number(deg_x,'f',2);
-        QString deg_yy = QString::number(deg_y,'f',2);
-        QString deg_zz = QString::number(deg_z,'f',2);
-
-//        DH_LOG(bones[boneIndex],0);     //Pythonと一致
-//        DH_LOG("deg_x="+deg_xx,0);
-//        DH_LOG("deg_y="+deg_yy,0);
-//        DH_LOG("deg_z="+deg_zz,0);
 
 		vector<string> line;
 
@@ -166,9 +163,9 @@ double rom_eval(dhArmature* arm){
 
 	}
 
-    t2 = clock();
-    double etime = (double)(t2-t1)/1000;
-    DH_LOG("section1 is "+QString::number(etime,'f',5),0);
+//    t2 = clock();
+//    double etime = (double)(t2-t1)/1000;
+//    DH_LOG("section1 is "+QString::number(etime,'f',5),0);
 
 
 // ********************************************************************************************
@@ -185,14 +182,6 @@ double rom_eval(dhArmature* arm){
 
 	joints_list.erase(joints_list.begin());		//先頭行削除
 
-	/* for(int row=0; row < joints_list.size(); row++){		//Matrixの中を見る
-		vector<string> rec = joints_list[row];
-		for(int col=0; col < rec.size(); col++){
-			cout << rec[col];
-			if(col < rec.size() -1)	cout << ",";
-		}
-			cout << endl;
-	} */
 
 // ********************************************************************************************
 // joint_bone.csvの読み込み
@@ -210,12 +199,13 @@ double rom_eval(dhArmature* arm){
 
 // ***********************************************************************************************
 
-    t3 = clock();
-    etime = (double)(t3-t2)/1000;
-    DH_LOG("section2 is "+QString::number(etime,'f',5),0);
+//    t3 = clock();
+//    etime = (double)(t3-t2)/1000;
+//    DH_LOG("section2 is "+QString::number(etime,'f',5),0);
 
+#pragma omp parallel for default(private) reduction(+:min_length_sum)
 	for(int i=0; i<joints_list.size(); i++){
-        t5 = clock();
+//        t5 = clock();
 		string joint1 = joints_list[i][0];
 		string joint2 = joints_list[i][1];
 
@@ -240,9 +230,9 @@ double rom_eval(dhArmature* arm){
 			}
         }
 
-        t6 = clock();
-        etime = (double)(t6-t5)/1000;
-        DH_LOG("subsec1 is "+QString::number(etime,'f',5),0);
+//        t6 = clock();
+//        etime = (double)(t6-t5)/1000;
+//        DH_LOG("subsec1 is "+QString::number(etime,'f',5),0);
 
         Vector2D position_pos(rot1,rot2);   //joints_listによって定められた関節の組み合わせに応じて
                                             //現在の関節角度組み合わせを定義する．
@@ -253,7 +243,7 @@ double rom_eval(dhArmature* arm){
 		string extension = ".csv";
 		string ashape_file = ashape_frame + joint1 + '_' + joint2 + extension;
 		vector<vector<string>> ashape_string;
-        vector<vector<double>> ashape;
+        vector<Vector2D> ashape;
 
 		Csv obj_ashape(ashape_file);
 		if(!obj_ashape.getCsv(ashape_string)){
@@ -261,28 +251,15 @@ double rom_eval(dhArmature* arm){
 			return 1;
 		}
 
-		for(unsigned int row=0; row<ashape_string.size(); row++){
-			vector<string> buf = ashape_string[row];
-            vector<double> rec;
-			for(unsigned int col=1; col<buf.size(); col++){
-				rec.push_back(stof(buf[col]));
-			}
-			ashape.push_back(rec);
-		}
+        for(unsigned int row=1; row<ashape_string.size(); row++){
+            vector<string> buf = ashape_string[row];
+            Vector2D rec(stof(buf[1]),stof(buf[2]));
+            ashape.push_back(rec);
+        }
 
-		ashape.erase(ashape.begin());
-
-    	/* for(int row=0; row<ashape.size(); row++){		//Matrixの中を見る
-            vector<double> rec = ashape[row];
-        	for(int col=0; col < rec.size(); col++){
-       		    cout << rec[col];
-            	if(col < rec.size() -1)	cout << ",";
-       		}
-        	cout << endl;
-    	} */
-        t7 = clock();
-        etime = (double)(t7-t6)/1000;
-        DH_LOG("subsec2 is "+QString::number(etime,'f',5),0);
+//        t7 = clock();
+//        etime = (double)(t7-t6)/1000;
+//        DH_LOG("subsec2 is "+QString::number(etime,'f',5),0);
 
         double min_pos_to_edge_length;
 
@@ -313,18 +290,18 @@ double rom_eval(dhArmature* arm){
 			}
 		}
 
-        t8 = clock();
-        etime = (double)(t8-t7)/1000;
-        DH_LOG("subsec3 is "+QString::number(etime,'f',5),0);
+//        t8 = clock();
+//        etime = (double)(t8-t7)/1000;
+//        DH_LOG("subsec3 is "+QString::number(etime,'f',5),0);
 
 		min_length_sum += min_length * min_length;
 
 //        DH_LOG("min_length_sum= "+QString::number(min_length_sum,'f',2),0);       //clear
 
 	}
-    t4 = clock();
-    etime = (double)(t4-t3)/1000;
-    DH_LOG("section3 is "+QString::number(etime,'f',5),0);
+//    t4 = clock();
+//    etime = (double)(t4-t3)/1000;
+//    DH_LOG("section3 is "+QString::number(etime,'f',5),0);
 
 //===================================
 //先にassembledActiveDF01.csvから
@@ -340,6 +317,7 @@ double rom_eval(dhArmature* arm){
         return 1;
     }
 
+#pragma omp for default(private) reduction(+:min_length_sum)
     for(int col=0; col<joint_bone.size(); col++){
         double min_length;
         double min,max,rot;
@@ -351,11 +329,9 @@ double rom_eval(dhArmature* arm){
             }
         }
 
-        string name;
-        int axis;
+        string name = joint_bone[col][1];;
+        int axis = stoi(joint_bone[col][2]);
 
-        name = joint_bone[col][1];
-        axis = stoi(joint_bone[col][2]);
 
         for(int ii=0; ii<rotation.size(); ii++){        //現在の関節角度をrotに格納
             if(rotation[ii][0] == name){
@@ -388,12 +364,11 @@ double rom_eval(dhArmature* arm){
 
 	} 
 
-    t5 = clock();
-    etime = (double)(t5-t4)/1000;
-    DH_LOG("section4 is "+QString::number(etime,'f',5),0);
+//    t5 = clock();
+//    etime = (double)(t5-t4)/1000;
+//    DH_LOG("section4 is "+QString::number(etime,'f',5),0);
 
     double Rom_eval = min_length_sum/(30+25);
-//    DH_LOG("Rom evaluation is "+QString::number(Rom_eval,'f',5),0);
 
     return Rom_eval;
 }

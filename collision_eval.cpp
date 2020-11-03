@@ -35,9 +35,9 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
 
-    DH_LOG("the number of Mesh1 is"+QString::number(mesh1->PointCount()),0);
-    DH_LOG("the number of Mesh2 is"+QString::number(mesh2->PointCount()),0);
-    dhVertex* vertex = mesh1->Vi(0);
+//    DH_LOG("the number of Mesh1 is"+QString::number(mesh1->PointCount()),0);
+//    DH_LOG("the number of Mesh2 is"+QString::number(mesh2->PointCount()),0);
+//    dhVertex* vertex = mesh1->Vi(0);
 
     computeContactRegion(bodyPoints,objectPoints,mesh1,mesh2);
 
