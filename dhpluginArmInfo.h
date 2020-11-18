@@ -9,6 +9,7 @@
 #include "dhMoCapSequence.h"
 #include "dhFeaturePoint.h"
 #include "dhSkeletalSubspaceDeformation.h"
+
 //! [0]
 class dhpluginArmInfo : public QObject, public dhPluginInterface
 {
@@ -50,6 +51,7 @@ private:
     dhFeaturePoints *trgFPs;
     dhMoCapSequence *trgMseq;
     QString fpname;
+
 
 public slots:
     void writeBoneNum(dhArmature *arm);

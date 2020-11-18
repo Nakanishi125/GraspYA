@@ -220,7 +220,14 @@ void dhArmOpe::Extract_maxmin(QString in){
 
 double dhArmOpe::RoM_evaluation(dhArmature* arm)
 {
-    return rom_eval(arm);
+    vector<vector<QString>> joints_list;
+    vector<vector<QString>> joint_bone;
+    vector<vector<QString>> DF;
+    vector<alphashape> ashape_all;
+
+    prepare_romeval(joints_list,joint_bone,DF,ashape_all);
+
+    return rom_eval(arm,joints_list,joint_bone,DF,ashape_all);
 }
 
 double dhArmOpe::Coordinate_evaluation(dhFeaturePoints* fp)

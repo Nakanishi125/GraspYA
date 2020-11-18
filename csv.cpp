@@ -43,9 +43,9 @@ bool Csv::getCsv(vector<vector<string>>& mat, const char delim){
 }
 
 bool Csv::getCsv(vector<vector<QString>>& mat, const char delim){
-    QFile file(Csv_file2);
+    QFile file(Csv_file2);      //ファイルオブジェクトを生成
 
-    if(!file.open(QIODevice::ReadOnly)){
+    if(!file.open(QIODevice::ReadOnly)){    //読み込み専用でファイルを開く
         DH_LOG("cannot open the input file",0);
         return false;
     }

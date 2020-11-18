@@ -7,6 +7,7 @@
 #include "csv.hpp"
 #include "Vector2D.hpp"
 #include "dhBone.h"
+#include "rom_eval.hpp"
 
 //#include <gsl/gsl_math.h>
 //#include <gsl/gsl_linalg.h>
@@ -29,6 +30,10 @@ struct Parameter{
     double par1;    double par2;    double par3;
     dhArmature* arm;    dhFeaturePoints* Fp;
     dhSkeletalSubspaceDeformation* mesh1;    dhMesh* mesh2;
+    vector<vector<QString>> jl;
+    vector<vector<QString>> jb;
+    vector<vector<QString>> DF;
+    vector<alphashape> as;
 };
 
 vector<double> Rot2Euler(const dhMath::dhMat33 Mat);

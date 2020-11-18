@@ -64,7 +64,8 @@ double func_estimate(const gsl_vector *v,void *params){
     Parameter *dp = (Parameter*)params;
     estimate_armature_change(v,dp->arm, dp->Fp, dp->mesh1, dp->mesh2);
     //　評価関数定義
-    double estimate_func = dp->par1*coord_eval(dp->Fp) + dp->par2*rom_eval(dp->arm)
+    double estimate_func = dp->par1*coord_eval(dp->Fp)
+                            + dp->par2*rom_eval(dp->arm,dp->jl,dp->jb,dp->DF,dp->as)
                             + dp->par3*collision_eval(dp->mesh1, dp->mesh2, dp->arm);
 
     return estimate_func;
@@ -165,6 +166,13 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
 int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
                        dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2)
 {
+    vector<vector<QString>> joints_list;
+    vector<vector<QString>> joint_bone;
+    vector<vector<QString>> DF;
+    vector<alphashape> ashape_all;
+
+    prepare_romeval(joints_list, joint_bone, DF, ashape_all);
+
     map<int,QString> bone_list;
     bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
     bone_list[3] = "TDP";      bone_list[4] = "IPP";    bone_list[5] = "IMP";
@@ -213,7 +221,8 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
     int status;
     double size;
 
-    Parameter p = { 70, 2, 30000, arm, Fp, mesh1, mesh2};            //func_estimateのパラメータ
+    //func_estimateのパラメータ
+    Parameter p = { 70, 2, 710, arm, Fp, mesh1, mesh2, joints_list, joint_bone, DF, ashape_all};
 
     const gsl_multimin_fminimizer_type *T;      //必要ないろいろ宣言
     gsl_multimin_fminimizer *s = NULL;

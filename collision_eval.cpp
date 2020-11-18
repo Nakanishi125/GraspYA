@@ -30,14 +30,12 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     bone_index[18] = "PPP";     bone_index[19] = "PMP";     bone_index[20] = "PDP";
 
     double size = hand_length(arm);
-//    DH_LOG("hand length is" + QString::number(size),0);
+
+//    DH_LOG("mesh1 is "+QString::number(mesh1->PointCount()),0);
+//    DH_LOG("mesh2 is "+QString::number(mesh2->PointCount()),0);
 
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
-
-//    DH_LOG("the number of Mesh1 is"+QString::number(mesh1->PointCount()),0);
-//    DH_LOG("the number of Mesh2 is"+QString::number(mesh2->PointCount()),0);
-//    dhVertex* vertex = mesh1->Vi(0);
 
     computeContactRegion(bodyPoints,objectPoints,mesh1,mesh2);
 
@@ -57,6 +55,7 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     for(int index=0; index<bones.size(); index++){      //getCoGsに相当
         points_obj[index].getCoGs(points_obj,cog_obj,index,keys_obj);
     }
+
 
 //        for(int k=0; k<cog_obj.size(); k++){          // CoGとそのbone名を出力(物体側)
 //            dhVec3 tmp = cog_obj[k];
@@ -138,7 +137,6 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
         points_hand2.push_back(points);
     }
 
-
 //    for(int cnt=0; cnt<points_hand2.size(); cnt++){       //points_hand2の中身チェック
 //        DH_LOG("bone is "+QString::fromStdString(bone_index[keys_hand[cnt]]),0);
 //        DH_LOG("Size is "+QString::number(points_hand2[cnt].size()),0);
@@ -159,6 +157,7 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
 
     double Volume = 0;
 
+#pragma omp for default(private) reduction(+:Volume)
     for(int bone=0; bone<points_hand2.size(); bone++){
         pcl::PointCloud<pcl::PointXYZ>::Ptr Cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -186,7 +185,6 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
         Volume += CHull->getTotalVolume();
     }
 
-
     delete[] points_obj;
     delete[] points_hand;
 
@@ -198,8 +196,8 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
 
     DH_LOG(QString::number(Volume),0);
 
-//    return Volume/(size*size*size);
-    return Volume/(551.99*551.99*551.99);
+    return Volume/(size*size*size);
+//    return Volume/(551.99*551.99*551.99);
 
 }
 

@@ -13,12 +13,21 @@
 #include"dhMath.h"
 #include"dhBone.h"
 
+struct alphashape{
+    QString path;
+    vector<Vector2D> vertices;
+};
+
+void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString>>& joint_bone,
+                     vector<vector<QString>>& DF, vector<alphashape>& ashape_all);
 
 double calc_distance(std::vector<std::vector<float>> xy, Vector2D pos_pos);
 
 void in_or_out(std::vector<std::vector<float>> xy, Vector2D pos_pos,int& inside_num,int& in_out);
 
-double rom_eval(dhArmature* arm);
+double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
+                vector<vector<QString>> joint_bone, vector<vector<QString>> DF,
+                vector<alphashape> ashape_all);
 
 
 #endif

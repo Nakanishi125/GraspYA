@@ -11,9 +11,84 @@
 #include"dhMath.h"
 #include"dhBone.h"
 
+#include"rom_eval.hpp"
 #include"finalpos.h"
 
 using namespace std;
+
+
+void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString>>& joint_bone,
+                     vector<vector<QString>>& DF, vector<alphashape>& ashape_all){
+// ===========================
+// joint_relation.csvの読み込み
+// ===========================
+
+    QString list = "C:\\kenkyu\\GraspYA\\data\\joint_relation.csv";
+
+    Csv objJL(list);
+    if(!objJL.getCsv(joints_list)){
+        DH_LOG("failed to read the file",0);
+        return ;
+    }
+
+    joints_list.erase(joints_list.begin());		//先頭行削除
+
+
+// =======================
+// joint_bone.csvの読み込み
+// =======================
+
+    QString bone = "C:\\kenkyu\\GraspYA\\data\\joint_bone.csv";
+
+    Csv objJB(bone);
+    if(!objJB.getCsv(joint_bone)){
+        DH_LOG("failed to read the file",0);
+        return ;
+    }
+
+    joint_bone.erase(joint_bone.begin());
+
+// =======================================
+// assembledActiveDF01_maxmin.csvの読み込み
+// =======================================
+    QString add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";
+
+    Csv objDF(add);
+    if(!objDF.getCsv(DF)){
+        DH_LOG("failed to read the file",0);
+        return ;
+    }
+
+    for(int i=0; i<joints_list.size(); i++){
+        QString joint1 = joints_list[i][0];
+        QString joint2 = joints_list[i][1];
+
+        QString ashape_frame = "C:\\kenkyu\\GraspYA\\ashape\\simple\\ashape_simple_";
+        QString extension = ".csv";
+        QString ashape_file = ashape_frame + joint1 + '_' + joint2 + extension;
+        vector<vector<QString>> ashape_string;
+        vector<Vector2D> vertex;
+
+        Csv obj_ashape(ashape_file);
+        if(!obj_ashape.getCsv(ashape_string)){
+            DH_LOG("failed to read the file5",0);
+            return ;
+        }
+
+        for(unsigned int row=1; row<ashape_string.size(); row++){
+            vector<QString> buf = ashape_string[row];
+            Vector2D rec(buf[1].toDouble(),buf[2].toDouble());
+            vertex.push_back(rec);
+        }
+
+        alphashape tmp;
+        tmp.path = ashape_file;
+        tmp.vertices = vertex;
+        ashape_all.push_back(tmp);
+    }
+}
+
+
 
 
 double calc_distance(vector<Vector2D> xy, Vector2D pos_pos){
@@ -131,13 +206,14 @@ void in_or_out(vector<Vector2D> xy, Vector2D pos_pos,int& inside_num,int& in_out
 	}
 }
 
-double rom_eval(dhArmature* arm){
+double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
+                vector<vector<QString>> joint_bone, vector<vector<QString>> DF,
+                vector<alphashape> ashape_all){
     QString bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
 //    string bones[] = {"TMCP","TPP","TDP","IPP","IMP","IDP","MPP","MMP","MDP","RPP","RMP","RDP","PPP","PMP","PDP"};
-//    clock_t t1,t2,t3,t4,t5,t6,t7,t8;
-//    t1 = clock();
 
-	vector<vector<string>> rotation;
+
+    vector<vector<QString>> rotation;
     double min_length_sum = 0.0;
 
 
@@ -152,62 +228,23 @@ double rom_eval(dhArmature* arm){
         double deg_z = r[0].p[2] / (3.141592) * 180.0;
 
 
-		vector<string> line;
+        vector<QString> line;
 
-        line.push_back(bones[boneIndex].toStdString());
-		line.push_back(to_string(deg_x));
-		line.push_back(to_string(deg_y));
-		line.push_back(to_string(deg_z));
+        line.push_back(bones[boneIndex]);
+        line.push_back(QString::number(deg_x));
+        line.push_back(QString::number(deg_y));
+        line.push_back(QString::number(deg_z));
 
         rotation.push_back(line);       //骨別の現在の関節角度
 
 	}
 
-//    t2 = clock();
-//    double etime = (double)(t2-t1)/1000;
-//    DH_LOG("section1 is "+QString::number(etime,'f',5),0);
-
-
-// ********************************************************************************************
-//joint_relation.csvの読み込み
-
-    string list = "C:\\kenkyu\\GraspYA\\data\\joint_relation.csv";
-	vector<vector<string>> joints_list;
-
-	Csv objJL(list);
-	if(!objJL.getCsv(joints_list)){
-        DH_LOG("failed to read the file",0);
-		return 1;
-	}
-
-	joints_list.erase(joints_list.begin());		//先頭行削除
-
-
-// ********************************************************************************************
-// joint_bone.csvの読み込み
-
-    string bone = "C:\\kenkyu\\GraspYA\\data\\joint_bone.csv";
-	vector<vector<string>> joint_bone;
-
-	Csv objJB(bone);
-	if(!objJB.getCsv(joint_bone)){
-        DH_LOG("failed to read the file",0);
-		return 1;
-	}
-
-	joint_bone.erase(joint_bone.begin());
-
-// ***********************************************************************************************
-
-//    t3 = clock();
-//    etime = (double)(t3-t2)/1000;
-//    DH_LOG("section2 is "+QString::number(etime,'f',5),0);
 
 #pragma omp parallel for default(private) reduction(+:min_length_sum)
 	for(int i=0; i<joints_list.size(); i++){
-//        t5 = clock();
-		string joint1 = joints_list[i][0];
-		string joint2 = joints_list[i][1];
+
+        QString joint1 = joints_list[i][0];
+        QString joint2 = joints_list[i][1];
 
         double rot1,rot2;
 
@@ -215,51 +252,32 @@ double rom_eval(dhArmature* arm){
 			if(joint_bone[j][0] == joint1){
 				for(int k=0; k<rotation.size(); k++){
 					if(rotation[k][0] == joint_bone[j][1]){
-						int axis = stoi(joint_bone[j][2]);
-						rot1 = stof(rotation[k][axis+1]);
+                        int axis = joint_bone[j][2].toInt();
+                        rot1 = rotation[k][axis+1].toDouble();
 					}
 				}
 			}
 			if(joint_bone[j][0] == joint2){
 				for(int k=0; k<rotation.size(); k++){
 					if(rotation[k][0] == joint_bone[j][1]){
-						int axis = stoi(joint_bone[j][2]);
-						rot2 = stof(rotation[k][axis+1]);
+                        int axis = joint_bone[j][2].toInt();
+                        rot2 = rotation[k][axis+1].toDouble();
 					}
 				}
 			}
         }
 
-//        t6 = clock();
-//        etime = (double)(t6-t5)/1000;
-//        DH_LOG("subsec1 is "+QString::number(etime,'f',5),0);
-
         Vector2D position_pos(rot1,rot2);   //joints_listによって定められた関節の組み合わせに応じて
                                             //現在の関節角度組み合わせを定義する．
 
-//        DH_LOG(QString::number(rot1,'f',2)+" , "+QString::number(rot2,'f',2),0);      //clear
 
-        string ashape_frame = "C:\\kenkyu\\GraspYA\\ashape\\simple\\ashape_simple_";
-		string extension = ".csv";
-		string ashape_file = ashape_frame + joint1 + '_' + joint2 + extension;
-		vector<vector<string>> ashape_string;
-        vector<Vector2D> ashape;
-
-		Csv obj_ashape(ashape_file);
-		if(!obj_ashape.getCsv(ashape_string)){
-            DH_LOG("failed to read the file",0);
-			return 1;
-		}
-
-        for(unsigned int row=1; row<ashape_string.size(); row++){
-            vector<string> buf = ashape_string[row];
-            Vector2D rec(stof(buf[1]),stof(buf[2]));
-            ashape.push_back(rec);
+        vector<Vector2D> ashape;    //ashapeを構成する頂点データ
+        for(int a=0; a<ashape_all.size(); a++){
+            if(ashape_all[a].path.contains(joint1, Qt::CaseInsensitive) &&
+                    ashape_all[a].path.contains(joint2, Qt::CaseInsensitive)){
+                ashape = ashape_all[a].vertices;
+            }
         }
-
-//        t7 = clock();
-//        etime = (double)(t7-t6)/1000;
-//        DH_LOG("subsec2 is "+QString::number(etime,'f',5),0);
 
         double min_pos_to_edge_length;
 
@@ -267,8 +285,6 @@ double rom_eval(dhArmature* arm){
 
 		int inside_num = 0;
 		int in_out = 1;
-
-//        DH_LOG(QString::number(min_pos_to_edge_length,'f',2),0);      //clear
 
 		in_or_out(ashape,position_pos,inside_num,in_out);
 
@@ -290,32 +306,8 @@ double rom_eval(dhArmature* arm){
 			}
 		}
 
-//        t8 = clock();
-//        etime = (double)(t8-t7)/1000;
-//        DH_LOG("subsec3 is "+QString::number(etime,'f',5),0);
-
 		min_length_sum += min_length * min_length;
-
-//        DH_LOG("min_length_sum= "+QString::number(min_length_sum,'f',2),0);       //clear
-
 	}
-//    t4 = clock();
-//    etime = (double)(t4-t3)/1000;
-//    DH_LOG("section3 is "+QString::number(etime,'f',5),0);
-
-//===================================
-//先にassembledActiveDF01.csvから
-//最大値と最小値を抜き出したファイルを読み込む
-//===================================
-
-    string add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";
-    vector<vector<string>> DF;
-
-    Csv objDF(add);
-    if(!objDF.getCsv(DF)){
-        DH_LOG("failed to read the file",0);
-        return 1;
-    }
 
 #pragma omp for default(private) reduction(+:min_length_sum)
     for(int col=0; col<joint_bone.size(); col++){
@@ -324,18 +316,18 @@ double rom_eval(dhArmature* arm){
 
         for(int col2=0; col2<DF.size(); col2++){
             if(joint_bone[col][0] == DF[col2][0]){
-                max = stof(DF[col2][1]);
-                min = stof(DF[col2][2]);
+                max = DF[col2][1].toDouble();
+                min = DF[col2][2].toDouble();
             }
         }
 
-        string name = joint_bone[col][1];;
-        int axis = stoi(joint_bone[col][2]);
+        QString name = joint_bone[col][1];
+        int axis = joint_bone[col][2].toInt();
 
 
         for(int ii=0; ii<rotation.size(); ii++){        //現在の関節角度をrotに格納
             if(rotation[ii][0] == name){
-                rot = stof(rotation[ii][axis+1]);
+                rot = rotation[ii][axis+1].toDouble();
             }
         }
 	
@@ -358,15 +350,8 @@ double rom_eval(dhArmature* arm){
             }
         }
 
-//        DH_LOG(QString::number(max,'f',2)+","+QString::number(min,'f',2)+","+QString::number(rot,'f',2),0);
-
 		min_length_sum += min_length * min_length;
-
 	} 
-
-//    t5 = clock();
-//    etime = (double)(t5-t4)/1000;
-//    DH_LOG("section4 is "+QString::number(etime,'f',5),0);
 
     double Rom_eval = min_length_sum/(30+25);
 
