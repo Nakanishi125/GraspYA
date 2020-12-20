@@ -51,6 +51,7 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 // =======================================
 // assembledActiveDF01_maxmin.csvの読み込み
 // =======================================
+
     QString add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";
 
     Csv objDF(add);
@@ -58,6 +59,10 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
         DH_LOG("failed to read the file",0);
         return ;
     }
+
+//==================================
+// ashapeの読み込み
+//==================================
 
     for(int i=0; i<joints_list.size(); i++){
         QString joint1 = joints_list[i][0];

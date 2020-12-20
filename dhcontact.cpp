@@ -11,7 +11,7 @@
 #include "dhSpatialSearching.h"
 #include "segment.h"
 
-
+//「mesh1を構成する点群」と「mesh2を構成する点群」が重なる領域内の点群を各々抽出する関数
 void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,dhPointCloudAsVertexRef*& contactPoints2,
                           dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2,double tolIn,double tolOut){
 
@@ -58,7 +58,7 @@ void getPointsFromCloud(dhPointCloudAsVertexRef* pointCloud,vector<dhVec3>& poin
 }
 
 double getDistance(dhVec3 point,dhVec3 orig,dhVec3 tail){
-    double length = sqrt(orig*tail)/2;
+    double length = sqrt(orig*tail)/2;      // bone_length/2
     dhVec3 center((orig[0] + tail[0])/2 ,(orig[1] + tail[1])/2 ,(orig[2] + tail[2])/2);
     dhVec3 unit((tail[0] - center[0])/length, (tail[1] - center[1])/length, (tail[2] - center[2])/length);
 
@@ -77,8 +77,8 @@ void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints,segment* segm,dhA
     vector<dhVec3> points;
     getPointsFromCloud(objectPoints,points);
 
-//#########################################################################
     dhSpatialSearching* spatialSearching = new dhSpatialSearching;
+
     for(int i=0; i<points.size(); i++){
         dhVec4 tmp_point = dhVec4(points[i]);
         spatialSearching->addPoint(tmp_point);
@@ -86,11 +86,13 @@ void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints,segment* segm,dhA
     spatialSearching->buildTree();
 
 
-//#########################################################################
+//=============
 //最寄りリンク探索
+//=============
     for(int i=0; i<points.size(); i++){
-        float dist = std::numeric_limits<float>::infinity();
+        float dist = std::numeric_limits<float>::infinity();    //初期値として無限大代入
         int bone;
+
         for(int j=0; j<bones.size(); j++){
             dhVec3 orig,tail;
 
@@ -106,8 +108,6 @@ void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints,segment* segm,dhA
         segm[bone].ObjectPoints.push_back(points[i]);
     }
 
-
-//############################################################################
 
     for(int k=0; k<bones.size(); k++){
         if(segm[k].ObjectPoints.empty())    continue;

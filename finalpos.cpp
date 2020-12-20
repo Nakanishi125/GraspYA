@@ -14,6 +14,11 @@
 #include <math.h>
 #include <vector>
 #include <cmath>
+#include<iostream>
+#include<cstdlib>
+#include<ctime>
+#include<cfloat>
+#include<array>
 
 using namespace std;
 
@@ -213,6 +218,10 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
             init.push_back(angle[0]);
         }
     }
+    DH_LOG("initial var is",0);
+    for(int i=0;i<init.size();i++){
+        DH_LOG(QString::number(init[i]),0);
+    }
 
 //=======================
 //ここからGSLによる最適化
@@ -263,6 +272,10 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
     estimate_armature_change(s->x,arm,Fp,mesh1,mesh2);
     dhApp::updateAllWindows();
     DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
+    DH_LOG("Final var is",0);
+    for(int ind=0; ind<init.size(); ind++){
+        DH_LOG(QString::number(gsl_vector_get(s->x,ind)),0);
+    }
 
     gsl_vector_free(x);
     gsl_vector_free(ss);
@@ -271,3 +284,260 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
     return status;
 
 }
+
+double func_estimate_PSO(const array<double,dimensions> para, Parameter pp){
+
+    estimate_armature_change_PSO(para, pp.arm, pp.Fp, pp.mesh1, pp.mesh2);
+
+    //　評価関数定義
+    double estimate_func = pp.par1*coord_eval(pp.Fp)
+                         + pp.par2*rom_eval(pp.arm, pp.jl, pp.jb, pp.DF, pp.as)
+                         + pp.par3*collision_eval(pp.mesh1, pp.mesh2, pp.arm);
+
+    return estimate_func;
+}
+
+void estimate_armature_change_PSO(const array<double,dimensions> para, dhArmature* arm, dhFeaturePoints *Fp,
+                              dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2){
+
+    map<int,QString> bone_list;
+    bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
+    bone_list[3] = "TDP";      bone_list[4] = "IPP";    bone_list[5] = "IMP";
+    bone_list[6] = "IDP";      bone_list[7] = "MPP";    bone_list[8] = "MMP";
+    bone_list[9] = "MDP";      bone_list[10] = "RMCP";  bone_list[11] = "RPP";
+    bone_list[12] = "RMP";     bone_list[13] = "RDP";   bone_list[14] = "PMCP";
+    bone_list[15] = "PPP";     bone_list[16] = "PMP";   bone_list[17] = "PDP";
+
+    vector<double> angle_deg;
+    vector<double> vec_t;
+    for(int l=0; l<bone_list.size(); l++){
+        if(bone_list[l] == "ROOT"){
+            angle_deg = { para[0], para[1], para[2] };
+            vec_t = { para[3], para[4], para[5] };
+        }
+        else if(bone_list[l] == "TMCP"){
+            angle_deg = { para[6], para[7], para[8] };
+        }
+        else if(bone_list[l] == "TPP"){
+            angle_deg = { para[9], 0, 0 };
+        }
+        else if(bone_list[l] == "TDP"){
+            angle_deg = { para[10], 0, 0 };
+        }
+        else if(bone_list[l] == "IPP"){
+            angle_deg = { para[11], para[12], para[13] };
+        }
+        else if(bone_list[l] == "IMP"){
+            angle_deg = { para[14], 0, 0 };
+        }
+        else if(bone_list[l] == "IDP"){
+            angle_deg = { para[15], 0, 0 };
+        }
+        else if(bone_list[l] == "MPP"){
+            angle_deg = { para[16], para[17], para[18] };
+        }
+        else if(bone_list[l] == "MMP"){
+            angle_deg = { para[19], 0, 0 };
+        }
+        else if(bone_list[l] == "MDP"){
+            angle_deg = { para[20], 0, 0 };
+        }
+        else if(bone_list[l] == "RMCP"){
+            angle_deg = { para[21], 0, 0 };
+        }
+        else if(bone_list[l] == "RPP"){
+            angle_deg = { para[22], para[23], para[24] };
+        }
+        else if(bone_list[l] == "RMP"){
+            angle_deg = { para[25], 0, 0 };
+        }
+        else if(bone_list[l] == "RDP"){
+            angle_deg = { para[26], 0, 0 };
+        }
+        else if(bone_list[l] == "PMCP"){
+            angle_deg = { para[27], 0, 0 };
+        }
+        else if(bone_list[l] == "PPP"){
+            angle_deg = { para[28], para[29], para[30] };
+        }
+        else if(bone_list[l] == "PMP"){
+            angle_deg = { para[31], 0, 0 };
+        }
+        else if(bone_list[l] == "PDP"){
+            angle_deg = { para[32], 0, 0 };
+        }
+
+        vector<double> theta = { angle_deg[0]/180*Pi, angle_deg[1]/180*Pi, angle_deg[2]/180*Pi };
+        dhMat33 RotMat33 = Euler2Rot(theta);
+        dhMat44 RotMat44(RotMat33);
+        if(bone_list[l] == "ROOT"){
+            RotMat44.p[12] = vec_t[0];
+            RotMat44.p[13] = vec_t[1];
+            RotMat44.p[14] = vec_t[2];
+        }
+
+        arm->bone(bone_list[l])->R = RotMat44;
+
+        angle_deg.clear();
+        theta.clear();
+    }
+
+    arm->Update();
+    Fp->Update();
+    mesh1->Update();
+    mesh2->Update();
+
+}
+
+//PSOの位置更新関数
+void update_positions(particles& positions, particles velocities){
+    for(size_t i=0; i<positions.size(); i++){
+        positions[i] = positions[i] + velocities[i];
+    }
+}
+
+//PSOの速度更新関数
+void update_velocities(particles positions, particles& velocities,
+                        particles PersonalBest, array<double,dimensions> GlobalBest,int t,
+                        const double wmax, const double wmin, const double ro1, const double ro2
+                        ){
+
+//    double rc1,rc2;
+//    rc1 = rand()*(ro_max/RAND_MAX);       //このプログラムでは乱数でなく，確定数を用いる
+//    rc2 = rand()*(ro_max/RAND_MAX);
+
+    double w = (wmax-wmin)*( repeat_times - t )/repeat_times + wmin;
+    for(size_t i=0; i<velocities.size(); i++){
+//        velocities[i] = w*velocities[i] + rc1*(PersonalBest[i] - positions[i]) +
+//                            rc2*(GlobalBest - positions[i]);
+        velocities[i] = w*velocities[i] + ro1*(PersonalBest[i] - positions[i]) +
+                            ro2*(GlobalBest - positions[i]);
+    }
+
+}
+
+//粒子群最適化法(PSO)による最終姿勢生成
+void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp,
+                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2){
+    //粒子法の設定部
+    double scope_min = -70;
+    double scope_max = 70;
+    particles positions;
+    particles velocities;
+
+    //粒子の位置，速度の初期化
+    map<int,QString> bone_list;
+    bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
+    bone_list[3] = "TDP";      bone_list[4] = "IPP";    bone_list[5] = "IMP";
+    bone_list[6] = "IDP";      bone_list[7] = "MPP";    bone_list[8] = "MMP";
+    bone_list[9] = "MDP";      bone_list[10] = "RMCP";  bone_list[11] = "RPP";
+    bone_list[12] = "RMP";     bone_list[13] = "RDP";   bone_list[14] = "PMCP";
+    bone_list[15] = "PPP";     bone_list[16] = "PMP";   bone_list[17] = "PDP";
+
+    vector<double> init;
+    for(int l=0; l<bone_list.size(); l++){
+        if(bone_list[l] == "ROOT"){
+            dhMat44 trans_mat = arm->bone(bone_list[l])->R;
+            dhMat33 rot_mat = trans_mat.toMat33();
+            vector<double> angle = Rot2Euler(rot_mat);
+
+            init.push_back(angle[0]);
+            init.push_back(angle[1]);
+            init.push_back(angle[2]);
+            init.push_back(trans_mat[12]);
+            init.push_back(trans_mat[13]);
+            init.push_back(trans_mat[14]);
+        }
+        else if(bone_list[l] == "TMCP" || bone_list[l] == "IPP" || bone_list[l] == "MPP"
+                || bone_list[l] == "RPP" || bone_list[l] == "PPP"){
+            dhMat44 trans_mat = arm->bone(bone_list[l])->R;
+            dhMat33 rot_mat = trans_mat.toMat33();
+            vector<double> angle = Rot2Euler(rot_mat);
+
+            init.push_back(angle[0]);
+            init.push_back(angle[1]);
+            init.push_back(angle[2]);
+        }
+        else{
+            dhMat44 trans_mat = arm->bone(bone_list[l])->R;
+            dhMat33 rot_mat = trans_mat.toMat33();
+            vector<double> angle = Rot2Euler(rot_mat);
+
+            init.push_back(angle[0]);
+        }
+    }
+
+    srand(time(NULL));
+    for(int row=0; row<positions.size(); row++){
+        for(int col=0; col<positions[0].size(); col++){
+            positions[row][col] = init[col] + rand()*(scope_max-scope_min)/RAND_MAX + scope_min;
+            velocities[row][col] = 0;
+        }
+    }
+
+    //ROM評価関数のファイル読み込み
+    vector<vector<QString>> joints_list;
+    vector<vector<QString>> joint_bone;
+    vector<vector<QString>> DF;
+    vector<alphashape> ashape_all;
+
+    prepare_romeval(joints_list, joint_bone, DF, ashape_all);
+    Parameter pp = { 70, 2, 710, arm, Fp, mesh1, mesh2, joints_list, joint_bone, DF, ashape_all};
+
+    //パーソナルベスト位置，値，グローバルベスト位置の初期化
+    particles PersonalBest = positions;
+    array<double,number_of_particles> PersonalBest_value;
+    for(int n=0; n<number_of_particles; n++){
+        PersonalBest_value[n] = func_estimate_PSO(PersonalBest[n], pp);
+    }
+    int gb_index;
+    double tmpmin = DBL_MAX;
+    for(int index=0; index<number_of_particles; index++){
+        if(PersonalBest_value[index] < tmpmin){
+            tmpmin = PersonalBest_value[index];
+            gb_index = index;
+        }
+    }
+
+    array<double,dimensions> GlobalBest = PersonalBest[gb_index];
+
+    //ここから最適化のための繰り返し計算
+    double tmpeval;
+    for(int t=0; t<repeat_times; t++){
+        //速度更新
+        update_velocities(positions, velocities, PersonalBest, GlobalBest, t);
+        //位置
+        update_positions(positions, velocities);
+
+        //パーソナルベストとグローバルベストの更新
+        tmpmin = DBL_MAX;
+        for(int i=0; i<number_of_particles; i++){
+            tmpeval = func_estimate_PSO(positions[i], pp);
+            if(tmpeval < PersonalBest_value[i]){
+                PersonalBest_value[i] = tmpeval;
+                PersonalBest[i] = positions[i];
+            }
+            if(PersonalBest_value[i] < tmpmin){
+                tmpmin = PersonalBest_value[i];
+                gb_index = i;
+            }
+            GlobalBest = PersonalBest[gb_index];
+        }
+
+        DH_LOG("now value is "+QString::number(func_estimate_PSO(GlobalBest, pp)),0);
+    }
+
+    DH_LOG("Final estimate value is "+QString::number(func_estimate_PSO(GlobalBest, pp)),0);
+}
+
+
+//double Ackley_function(array<double,dimensions> pos){
+//    double t1,t2,t3,t4;
+//    t1 = -20*exp(-0.2 * sqrt(0.5 * (pos[0]*pos[0]+pos[1]*pos[1]) ));
+//    t2 = -exp(0.5 * ( cos(2*pi*pos[0]) + cos(2*pi*pos[1]) ));
+//    t3 = e;
+//    t4 = 20;
+//    return t1+t2+t3+t4;
+//}
+
+

@@ -243,7 +243,8 @@ double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMe
 void dhArmOpe::FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp,
                                   dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2)
 {
-    FinalPostureCreate(arm,Fp,mesh1,mesh2);
+//    FinalPostureCreate(arm,Fp,mesh1,mesh2);
+    FinalPostureCreate_PSO(arm, Fp, mesh1, mesh2);
 }
 
 QStringList dhArmOpe::ElementActionTitles()
