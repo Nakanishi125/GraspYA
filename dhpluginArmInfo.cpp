@@ -218,14 +218,14 @@ void dhArmOpe::Extract_maxmin(QString in){
     DH_LOG("Completed!",0);
 }
 
-double dhArmOpe::RoM_evaluation(dhArmature* arm)
+double dhArmOpe::RoM_evaluation(dhArmature* arm, int age)
 {
     vector<vector<QString>> joints_list;
     vector<vector<QString>> joint_bone;
     vector<vector<QString>> DF;
     vector<alphashape> ashape_all;
 
-    prepare_romeval(joints_list,joint_bone,DF,ashape_all);
+    prepare_romeval(joints_list, joint_bone, DF, ashape_all, age);
 
     return rom_eval(arm,joints_list,joint_bone,DF,ashape_all);
 }
@@ -241,10 +241,10 @@ double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMe
 }
 
 void dhArmOpe::FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp,
-                                  dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2)
+                                  dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age)
 {
-//    FinalPostureCreate(arm,Fp,mesh1,mesh2);
-    FinalPostureCreate_PSO(arm, Fp, mesh1, mesh2);
+    FinalPostureCreate(arm,Fp,mesh1,mesh2, age);
+//    FinalPostureCreate_PSO(arm, Fp, mesh1, mesh2, age);
 }
 
 QStringList dhArmOpe::ElementActionTitles()
@@ -329,20 +329,26 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
 
     else if(cmd == "RoM evaluation"){
 
-        bool isOK;
+        bool isOK,ok;
         IDHElement* e=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
-        dhArmature* arm = dynamic_cast<dhArmature*>(e);
+        if(isOK){
+            dhArmature* arm = dynamic_cast<dhArmature*>(e);
+            int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
+                                             tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
 
-        double rom_eva;
-        clock_t time1,time2;
-        time1 = clock();
+            if(ok){
+                double rom_eva;
+                clock_t time1,time2;
+                time1 = clock();
 
-        rom_eva = this->RoM_evaluation(arm);
+                rom_eva = this->RoM_evaluation(arm,age);
 
-        time2 = clock();
-        double etime = (double)(time2-time1)/1000;
-        DH_LOG("RoM evaluation is "+QString::number(rom_eva,'f',5),0);
-        DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                time2 = clock();
+                double etime = (double)(time2-time1)/1000;
+                DH_LOG("RoM evaluation is "+QString::number(rom_eva,'f',5),0);
+                DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+            }
+        }
 
         return true;
     }
@@ -350,41 +356,53 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
     else if(cmd == "Coordinate evaluation"){
         bool isOK;
         IDHElement* e=dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK);
-        dhFeaturePoints* Fp = dynamic_cast<dhFeaturePoints*>(e);
 
-        float co_eva;
-        clock_t time1,time2;
-        time1 = clock();
+        if(isOK){
+            dhFeaturePoints* Fp = dynamic_cast<dhFeaturePoints*>(e);
 
-        co_eva = this->Coordinate_evaluation(Fp);
+            float co_eva;
+            clock_t time1,time2;
+            time1 = clock();
 
-        time2 = clock();
-        double etime = (double)(time2-time1)/1000;
-        DH_LOG("Coordinate evaluation is "+QString::number(co_eva,'f',5),0);
-        DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+            co_eva = this->Coordinate_evaluation(Fp);
+
+            time2 = clock();
+            double etime = (double)(time2-time1)/1000;
+            DH_LOG("Coordinate evaluation is "+QString::number(co_eva,'f',5),0);
+            DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+        }
 
         return true;
     }
 
     else if(cmd == "Collision evaluation"){
-        bool isOK;
+        bool isOK,isOK2,isOK3;
+
         IDHElement* e1 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK);
-        dhSkeletalSubspaceDeformation* mesh1 = dynamic_cast<dhSkeletalSubspaceDeformation*>(e1);
-        IDHElement* e2 = dhApp::elementSelectionDialog(dhMesh::type,&isOK);
-        dhMesh* mesh2 = dynamic_cast<dhMesh*>(e2);
-        IDHElement* e3 = dhApp::elementSelectionDialog(dhArmature::type,&isOK);
-        dhArmature* arm = dynamic_cast<dhArmature*>(e3);
+        if(isOK){
+            dhSkeletalSubspaceDeformation* mesh1 = dynamic_cast<dhSkeletalSubspaceDeformation*>(e1);
 
-        clock_t time1,time2;
-        time1 = clock();
-        double handcol_eva;
+            IDHElement* e2 = dhApp::elementSelectionDialog(dhMesh::type,&isOK2);
+            if(isOK2){
+                dhMesh* mesh2 = dynamic_cast<dhMesh*>(e2);
 
-        handcol_eva = this->Collision_evaluation(mesh1, mesh2, arm);
+                IDHElement* e3 = dhApp::elementSelectionDialog(dhArmature::type,&isOK3);
+                if(isOK3){
+                    dhArmature* arm = dynamic_cast<dhArmature*>(e3);
 
-        time2 = clock();
-        double etime = (double)(time2-time1)/1000;
-        DH_LOG("Collision evaluation is "+QString::number(handcol_eva,'f',8),0);
-        DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                    clock_t time1,time2;
+                    time1 = clock();
+                    double handcol_eva;
+
+                    handcol_eva = this->Collision_evaluation(mesh1, mesh2, arm);
+
+                    time2 = clock();
+                    double etime = (double)(time2-time1)/1000;
+                    DH_LOG("Collision evaluation is "+QString::number(handcol_eva,'f',8),0);
+                    DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                }
+            }
+        }
 
         return true;
     }
@@ -392,21 +410,36 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
     else if(cmd == "FinalPostureCreate"){
         clock_t time1,time2;
         time1 = clock();
-        bool isOK;
+        bool isOK,isOK2,isOK3,isOK4,ok;
         IDHElement* e1=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
-        dhArmature* arm = dynamic_cast<dhArmature*>(e1);
-        IDHElement* e2=dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK);
-        dhFeaturePoints* Fp = dynamic_cast<dhFeaturePoints*>(e2);
-        IDHElement* e3 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK);
-        dhSkeletalSubspaceDeformation* mesh1 = dynamic_cast<dhSkeletalSubspaceDeformation*>(e3);
-        IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK);
-        dhMesh* mesh2 = dynamic_cast<dhMesh*>(e4);
+        if(isOK){
+            dhArmature* arm = dynamic_cast<dhArmature*>(e1);
 
-        this->FinalPosture_create(arm,Fp,mesh1,mesh2);
+            IDHElement* e2=dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK2);
+            if(isOK2){
+                dhFeaturePoints* Fp = dynamic_cast<dhFeaturePoints*>(e2);
 
-        time2 = clock();
-        double etime = (double)(time2-time1)/1000;
-        DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                IDHElement* e3 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK3);
+                if(isOK3){
+                    dhSkeletalSubspaceDeformation* mesh1 = dynamic_cast<dhSkeletalSubspaceDeformation*>(e3);
+
+                    IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK);
+                    if(isOK4){
+                        dhMesh* mesh2 = dynamic_cast<dhMesh*>(e4);
+
+                        int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
+                                                         tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+                        if(ok){
+                            this->FinalPosture_create(arm,Fp,mesh1,mesh2,age);
+
+                            time2 = clock();
+                            double etime = (double)(time2-time1)/1000;
+                            DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                        }
+                    }
+                }
+            }
+        }
 
         return true;
     }

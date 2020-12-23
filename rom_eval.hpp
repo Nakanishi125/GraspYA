@@ -18,8 +18,12 @@ struct alphashape{
     vector<Vector2D> vertices;
 };
 
+double cal_res(int age);
+
+void rest_ashape(vector<alphashape>& ashape_all, double rst);
+
 void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString>>& joint_bone,
-                     vector<vector<QString>>& DF, vector<alphashape>& ashape_all);
+                     vector<vector<QString>>& DF, vector<alphashape>& ashape_all, int age);
 
 double calc_distance(std::vector<std::vector<float>> xy, Vector2D pos_pos);
 

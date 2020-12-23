@@ -169,14 +169,14 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
 }
 
 int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
-                       dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2)
+                       dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age)
 {
     vector<vector<QString>> joints_list;
     vector<vector<QString>> joint_bone;
     vector<vector<QString>> DF;
     vector<alphashape> ashape_all;
 
-    prepare_romeval(joints_list, joint_bone, DF, ashape_all);
+    prepare_romeval(joints_list, joint_bone, DF, ashape_all, age);
 
     map<int,QString> bone_list;
     bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
@@ -218,10 +218,10 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
             init.push_back(angle[0]);
         }
     }
-    DH_LOG("initial var is",0);
-    for(int i=0;i<init.size();i++){
-        DH_LOG(QString::number(init[i]),0);
-    }
+
+//    for(int i=0; init.size(); i++){     //初期値確認
+//        DH_LOG(QString::number(i)+": "+QString::number(init[i]),0);
+//    }
 
 //=======================
 //ここからGSLによる最適化
@@ -272,10 +272,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
     estimate_armature_change(s->x,arm,Fp,mesh1,mesh2);
     dhApp::updateAllWindows();
     DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
-    DH_LOG("Final var is",0);
-    for(int ind=0; ind<init.size(); ind++){
-        DH_LOG(QString::number(gsl_vector_get(s->x,ind)),0);
-    }
+    DH_LOG("iter is"+QString::number(iter),0);
 
     gsl_vector_free(x);
     gsl_vector_free(ss);
@@ -418,7 +415,7 @@ void update_velocities(particles positions, particles& velocities,
 
 //粒子群最適化法(PSO)による最終姿勢生成
 void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp,
-                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2){
+                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age){
     //粒子法の設定部
     double scope_min = -70;
     double scope_max = 70;
@@ -481,7 +478,7 @@ void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp,
     vector<vector<QString>> DF;
     vector<alphashape> ashape_all;
 
-    prepare_romeval(joints_list, joint_bone, DF, ashape_all);
+    prepare_romeval(joints_list, joint_bone, DF, ashape_all, age);
     Parameter pp = { 70, 2, 710, arm, Fp, mesh1, mesh2, joints_list, joint_bone, DF, ashape_all};
 
     //パーソナルベスト位置，値，グローバルベスト位置の初期化

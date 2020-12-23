@@ -84,7 +84,7 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
                               dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2);
 
 int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
-                       dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2);
+                       dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age);
 
 double func_estimate_PSO(const array<double,dimensions> para, Parameter pp);
 
@@ -99,6 +99,6 @@ void update_velocities( particles positions, particles& velocities,
                         const double ro1=1.5, const double ro2=1.5);
 
 void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp,
-                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2);
+                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age);
 
 #endif // FINALPOS_H

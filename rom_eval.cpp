@@ -16,9 +16,55 @@
 
 using namespace std;
 
+double cal_res(int age){
+    if(age>=30){
+        return -0.005*age + 1.15;   // y = -0.2/40 * (x-30) + 1.0 <=> y = -0.2/40*x + 1.15
+    }
+    else{
+        return 1.0;
+    }
+}
+
+void rest_ashape(vector<alphashape>& ashape_all, double rst){
+    double avex,avey;
+    for(int i=0; i<ashape_all.size(); i++){
+        double sumx = 0;
+        double sumy = 0;
+        for(int j=0; j<ashape_all[i].vertices.size(); j++){
+            sumx += ashape_all[i].vertices[j].x;
+            sumy += ashape_all[i].vertices[j].y;
+        }
+        avex = sumx/ashape_all[i].vertices.size();
+        avey = sumy/ashape_all[i].vertices.size();
+        for(int j=0; j<ashape_all[i].vertices.size(); j++){
+            ashape_all[i].vertices[j].x -= avex;
+            ashape_all[i].vertices[j].y -= avey;
+            ashape_all[i].vertices[j].x *= rst;
+            ashape_all[i].vertices[j].y *= rst;
+            ashape_all[i].vertices[j].x += avex;
+            ashape_all[i].vertices[j].y += avey;
+        }
+
+//    //ここからデバッグ用
+//        QString p = "C:\\kenkyu\\tmp\\" + ashape_all[i].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\");
+//        QFile opfile(p);
+//        if(!opfile.open(QIODevice::WriteOnly)){
+//            DH_LOG("cannot open the output file",0);
+//        }
+
+//        QTextStream op(&opfile);
+//        for(int j=0; j<ashape_all[i].vertices.size(); j++){
+//            op << ashape_all[i].vertices[j].x << ',';
+//            op << ashape_all[i].vertices[j].y << '\n';
+//        }
+    }
+}
 
 void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString>>& joint_bone,
-                     vector<vector<QString>>& DF, vector<alphashape>& ashape_all){
+                     vector<vector<QString>>& DF, vector<alphashape>& ashape_all, int age){
+
+    double rst = cal_res(age);  //年齢に応じた制限率計算
+
 // ===========================
 // joint_relation.csvの読み込み
 // ===========================
@@ -59,6 +105,13 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
         DH_LOG("failed to read the file",0);
         return ;
     }
+    for(int t=0; t<DF.size(); t++){
+        double tmp1,tmp2;
+        tmp1 = DF[t][1].toDouble()*rst;
+        tmp2 = DF[t][2].toDouble()*rst;
+        DF[t][1] = QString::number(tmp1);
+        DF[t][2] = QString::number(tmp2);
+    }
 
 //==================================
 // ashapeの読み込み
@@ -91,6 +144,7 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
         tmp.vertices = vertex;
         ashape_all.push_back(tmp);
     }
+    rest_ashape(ashape_all,rst);
 }
 
 
