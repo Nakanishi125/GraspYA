@@ -14,7 +14,7 @@
 #include "dhFeaturePoint.h"
 #include "dhSkeletalSubspaceDeformation.h"
 #include "dhcontact.h"
-#include "segment.h"
+
 
 double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
 

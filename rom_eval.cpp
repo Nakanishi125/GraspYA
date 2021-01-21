@@ -174,20 +174,21 @@ vector<alphashape> restrict_ashape(vector<alphashape>& ashape_all, double rst)  
         OrgROM->fill_image(0);      //中身を塗りつぶす
         ResROM->fill_image(0);
 
-//　確認するために，画像ファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
-        PGM* OverWrap = new PGM(255,WIDTH,HEIGHT);
-        for(int row=0; row<OverWrap->width; row++){
-            for(int col=0; col<OverWrap->height; col++){
-                if(OrgROM->image[row][col] == 0)    OverWrap->image[row][col] = 0;
-                if(ResROM->image[row][col] == 0)    OverWrap->image[row][col] = 125;
-            }
-        }
-        QString head = "C:\\kenkyu\\GraspYA\\ashape_rst\\pgm\\";
-        QString middle = (ashape_all[t].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\")).remove(".csv");
-        QString tail = ".pgm";
-        QString path_pgm = head+middle+tail;
-        OverWrap->save_image(path_pgm.toStdString());
-//ここまで
+////　確認するために，画像ファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
+//        PGM* OverWrap = new PGM(255,WIDTH,HEIGHT);
+//        for(int row=0; row<OverWrap->width; row++){
+//            for(int col=0; col<OverWrap->height; col++){
+//                if(OrgROM->image[row][col] == 0)    OverWrap->image[row][col] = 0;
+//                if(ResROM->image[row][col] == 0)    OverWrap->image[row][col] = 125;
+//            }
+//        }
+//        QString head = "C:\\kenkyu\\GraspYA\\ashape_rst\\pgm\\";
+//        QString middle = (ashape_all[t].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\")).remove(".csv");
+//        QString tail = ".pgm";
+//        QString path_pgm = head+middle+tail;
+//        OverWrap->save_image(path_pgm.toStdString());
+//        delete OverWrap;
+////ここまで
 
         PGM *ANDROM = new PGM(255,WIDTH,HEIGHT);
 
@@ -207,27 +208,31 @@ vector<alphashape> restrict_ashape(vector<alphashape>& ashape_all, double rst)  
         pgm_to_csv(edge, csvize, minx, miny, maxx, maxy, split_csv);
 
 
-//　確認するために，csvファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
-        QString top = "C:\\kenkyu\\GraspYA\\ashape_rst\\csv\\";
-        QString bottom = ashape_all[t].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\");
+////　確認するために，csvファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
+//        QString top = "C:\\kenkyu\\GraspYA\\ashape_rst\\csv\\";
+//        QString bottom = ashape_all[t].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\");
 
-        string csv_path = (top+bottom+".csv").toStdString();
-        std::ofstream ofs(csv_path);
+//        string csv_path = (top+bottom+".csv").toStdString();
+//        std::ofstream ofs(csv_path);
 
-        for(size_t ii=0; ii<csvize.size(); ii++){   //制限ROM
-            ofs << std::to_string(csvize[ii].x) << ',' << std::to_string(csvize[ii].y) << std::endl;
-        }
-        ofs << std::endl << std::endl;
-        for(size_t jj=0; jj<ashape_all[t].vertices.size(); jj++){   //元ROM
-            ofs << std::to_string(ashape_all[t].vertices[jj].x) << ',' << std::to_string(ashape_all[t].vertices[jj].y) << std::endl;
-        }
-//ここまで
+//        for(size_t ii=0; ii<csvize.size(); ii++){   //制限ROM
+//            ofs << std::to_string(csvize[ii].x) << ',' << std::to_string(csvize[ii].y) << std::endl;
+//        }
+//        ofs << std::endl << std::endl;
+//        for(size_t jj=0; jj<ashape_all[t].vertices.size(); jj++){   //元ROM
+//            ofs << std::to_string(ashape_all[t].vertices[jj].x) << ',' << std::to_string(ashape_all[t].vertices[jj].y) << std::endl;
+//        }
+////ここまで
 
 
         alphashape tmp;
         tmp.path = ashape_all[t].path;
         tmp.vertices = csvize;
         ashape_rst_all.push_back(tmp);
+
+        delete OrgROM;
+        delete ResROM;
+        delete ANDROM;
     }
 
     return ashape_rst_all;
@@ -313,7 +318,7 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
         tmp.vertices = vertex;
         ashape_all.push_back(tmp);
     }
-//    ashape_rst_all = ashape_all;
+
     ashape_rst_all = restrict_ashape(ashape_all,rst);    //ashape ROMの制限
 }
 

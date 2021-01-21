@@ -1,4 +1,5 @@
 #include<vector>
+#include<array>
 #include<limits>
 #include<memory>
 
@@ -9,7 +10,8 @@
 #include "dhCollisionDetection.h"
 #include "dhArmature.h"
 #include "dhSpatialSearching.h"
-#include "segment.h"
+#include "csv.hpp"
+
 
 //「mesh1を構成する点群」と「mesh2を構成する点群」が重なる領域内の点群を各々抽出する関数
 void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,dhPointCloudAsVertexRef*& contactPoints2,
@@ -37,10 +39,21 @@ void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,dhPointCloudA
 
 }
 
-void getArmatureStructure(dhArmature* arm,vector<QString>& bones,vector<int>& depths,dhBone* root){
-    root = arm->bone(0);
-    traceArmature(root,0,bones,depths);
+
+void getArmatureStructure(dhArmature* arm, dhBone* link,
+                          vector<QString>& bones, vector<int>& depths, QString root){
+
+    if(root == "ROOT"){
+        link = arm->bone(0);
+    }
+    else{
+        link = arm->bone(root);
+    }
+
+    traceArmature(link, 0, bones, depths);
+
 }
+
 
 void traceArmature(dhBone* parent,int depth,vector<QString>& bones,vector<int>& depths){
     bones.push_back(parent->Name());
@@ -50,12 +63,14 @@ void traceArmature(dhBone* parent,int depth,vector<QString>& bones,vector<int>& 
     }
 }
 
+
 void getPointsFromCloud(dhPointCloudAsVertexRef* pointCloud,vector<dhVec3>& points){
 
     for(int j=0; j<pointCloud->PointCount(); j++){
         points.push_back((pointCloud->Position(j)).toVec3());
     }
 }
+
 
 double getDistance(dhVec3 point,dhVec3 orig,dhVec3 tail){
     double length = sqrt(orig*tail)/2;      // bone_length/2
@@ -71,6 +86,9 @@ double getDistance(dhVec3 point,dhVec3 orig,dhVec3 tail){
     return sqrt((point-foot)*(point-foot));
 }
 
+
+//点群objectPointsの所属骨を導出し，segment型のメンバに適切な値を入力していく関数
+//ここでのsegmは，骨に所属する．
 void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints,segment* segm,dhArmature* arm,
                          vector<QString> &bones){
 
@@ -141,5 +159,75 @@ void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints,segment* segm,dhA
 
     delete spatialSearching;
 }
+
+//areaに所属するsegmentのメンバ変数を埋める
+void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
+                              dhSkeletalSubspaceDeformation* bodySSD, dhMesh* bodyMesh,
+                              dhMesh* objMesh, vector<vector<QString>> color_def, segment* segm){
+
+
+    for(size_t area=0; area<color_def.size(); area++){     //メンバ変数BodyColorへの代入
+        segm[area].BodyColor.push_back(color_def[area][1].toInt());
+        segm[area].BodyColor.push_back(color_def[area][2].toInt());
+        segm[area].BodyColor.push_back(color_def[area][3].toInt());
+    }
+
+    for(int i=0; i<contactPoints->PointCount(); i++){   //メンバ変数BodyPointsへの代入
+        int PointID = contactPoints->refID(i);
+
+        dhVec3 point_color(bodyMesh->Vi(PointID)->color(0),
+                           bodyMesh->Vi(PointID)->color(1),
+                           bodyMesh->Vi(PointID)->color(2));
+
+        int flag = 0;
+        for(int area=0; area<color_def.size(); area++){
+            if(segm[area].BodyColor[0] == (int)(255*point_color[0]) &&
+               segm[area].BodyColor[1] == (int)(255*point_color[1]) &&
+               segm[area].BodyColor[2] == (int)(255*point_color[2]) )
+            {
+                segm[area].BodyPointsID.push_back(PointID);
+                flag = 1;
+            }
+        }
+        if(flag == 0)   DH_LOG("The color is not defined.",0);
+    }
+
+    for(int area=0; area<color_def.size(); area++)
+    {
+        if(segm[area].BodyPointsID.size() <= 5){    //接触点数が5個以内なら，空にする
+            segm[area].BodyPointsID.clear();
+        }
+
+        dhVec3 sum_points;
+        int points_num = segm[area].BodyPointsID.size();
+        if(points_num){
+            for(int j=0; j<points_num; j++){
+                dhVec3 point_pos = bodySSD->V(segm[area].BodyPointsID[j]).toVec3();
+                sum_points = sum_points + point_pos;
+            }
+
+            dhVec3 cogs(sum_points[0]/points_num, sum_points[1]/points_num, sum_points[2]/points_num);
+
+            segm[area].BodyCoG = cogs;          //メンバ変数BodyCoGへの代入(1領域における全座標の重心)
+
+            double dist_min = std::numeric_limits<float>::infinity();   //初期値に無限大を代入
+            for(int m=0; m<objMesh->Nv(); m++){
+                dhVec3 obj_pos = objMesh->V(m).toVec3();
+                double dist = (cogs-obj_pos).norm();
+
+                if(dist_min>dist){      //メンバ変数Object～への代入
+                    dist_min = dist;
+                    segm[area].ObjectPointsID = m;
+                    segm[area].ObjectCoG = obj_pos;
+                    segm[area].ObjectNormal = objMesh->Vnorm(m).toVec3();
+                }
+            }
+        }
+
+    }
+
+}
+
+
 
 

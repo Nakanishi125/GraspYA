@@ -62,8 +62,8 @@ public slots:
     double RoM_evaluation(dhArmature* arm, int age);
     double Coordinate_evaluation(dhFeaturePoints* Fp);
     double Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
-    void FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp,
-                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age);
+    void FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
+                             dhMesh* handMesh, dhMesh* objMesh, int age);
 
     virtual const bool	IsValid(void)const{ return (1); }
     virtual void Update(void){}//何もしない設定

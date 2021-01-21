@@ -3,6 +3,7 @@
 #include "rom_eval.hpp"
 #include "coordinate_eval.hpp"
 #include "collision_eval.hpp"
+#include "force_closure.hpp"
 
 //#include <gsl/gsl_math.h>
 //#include <gsl/gsl_linalg.h>
@@ -65,19 +66,23 @@ dhMath::dhMat33 Euler2Rot(const vector<double> angle){
     return Rot;
 }
 
+
 double func_estimate(const gsl_vector *v,void *params){
     Parameter *dp = (Parameter*)params;
-    estimate_armature_change(v,dp->arm, dp->Fp, dp->mesh1, dp->mesh2);
+    estimate_armature_change(v,dp->arm, dp->Fp, dp->ssd, dp->objMesh);
     //　評価関数定義
-    double estimate_func = dp->par1*coord_eval(dp->Fp)
+    double estimate_func =    dp->par1*coord_eval(dp->Fp)
                             + dp->par2*rom_eval(dp->arm,dp->jl,dp->jb,dp->DF,dp->as)
-                            + dp->par3*collision_eval(dp->mesh1, dp->mesh2, dp->arm);
+                            + dp->par3*collision_eval(dp->ssd, dp->objMesh, dp->arm)
+                            - dp->par4*forceClosure_eval(dp->arm, dp->ssd, dp->handMesh, dp->objMesh,
+                                                         dp->MP, dp->color_def, dp->area_to_bone);
+
 
     return estimate_func;
 }
 
 void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoints *Fp,
-                              dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2){
+                              dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh){
 
     map<int,QString> bone_list;
     bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
@@ -163,20 +168,26 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
 
     arm->Update();
     Fp->Update();
-    mesh1->Update();
-    mesh2->Update();
+    ssd->Update();
+    objMesh->Update();
 
 }
 
-int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
-                       dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age)
+int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
+                       dhMesh* handMesh, dhMesh* objMesh, int age)
 {
-    vector<vector<QString>> joints_list;
+    vector<vector<QString>> joints_list;        //ファイル類の読み込み
     vector<vector<QString>> joint_bone;
     vector<vector<QString>> DF;
     vector<alphashape> ashape_all;
 
+    vector<vector<QString>> MP;
+    vector<vector<QString>> color_def;
+    vector<vector<QString>> area_to_bone;
+
     prepare_romeval(joints_list, joint_bone, DF, ashape_all, age);
+    prepare_forceClosure(MP, color_def, area_to_bone);
+
 
     map<int,QString> bone_list;
     bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
@@ -186,6 +197,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
     bone_list[12] = "RMP";     bone_list[13] = "RDP";   bone_list[14] = "PMCP";
     bone_list[15] = "PPP";     bone_list[16] = "PMP";   bone_list[17] = "PDP";
 
+//ここから初期値生成
     vector<double> init;
     for(int l=0; l<bone_list.size(); l++){
         if(bone_list[l] == "ROOT"){
@@ -230,8 +242,10 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
     int status;
     double size;
 
-    //func_estimateのパラメータ
-    Parameter p = { 70, 2, 710, arm, Fp, mesh1, mesh2, joints_list, joint_bone, DF, ashape_all};
+//func_estimateのパラメータ(各評価関数の全変数)
+
+    Parameter p = { 70, 2, 710, 2000, arm, Fp, ssd, handMesh, objMesh,
+                    joints_list, joint_bone, DF, ashape_all, MP, color_def, area_to_bone};
 
     const gsl_multimin_fminimizer_type *T;      //必要ないろいろ宣言
     gsl_multimin_fminimizer *s = NULL;
@@ -269,7 +283,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
     }while(status == GSL_CONTINUE && iter < 30000);
 
 
-    estimate_armature_change(s->x,arm,Fp,mesh1,mesh2);
+    estimate_armature_change(s->x, arm, Fp, ssd, objMesh);
     dhApp::updateAllWindows();
     DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
     DH_LOG("iter is"+QString::number(iter),0);
@@ -282,20 +296,29 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,
 
 }
 
+
+//=================================================================ここからPSO
+
+
+
+
+
 double func_estimate_PSO(const array<double,dimensions> para, Parameter pp){
 
-    estimate_armature_change_PSO(para, pp.arm, pp.Fp, pp.mesh1, pp.mesh2);
+    estimate_armature_change_PSO(para, pp.arm, pp.Fp, pp.ssd, pp.objMesh);
 
     //　評価関数定義
     double estimate_func = pp.par1*coord_eval(pp.Fp)
                          + pp.par2*rom_eval(pp.arm, pp.jl, pp.jb, pp.DF, pp.as)
-                         + pp.par3*collision_eval(pp.mesh1, pp.mesh2, pp.arm);
+                         + pp.par3*collision_eval(pp.ssd, pp.objMesh, pp.arm)
+                         - pp.par4*forceClosure_eval(pp.arm, pp.ssd, pp.handMesh, pp.objMesh,
+                                                     pp.MP, pp.color_def, pp.area_to_bone);
 
     return estimate_func;
 }
 
 void estimate_armature_change_PSO(const array<double,dimensions> para, dhArmature* arm, dhFeaturePoints *Fp,
-                              dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2){
+                              dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh){
 
     map<int,QString> bone_list;
     bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
@@ -381,8 +404,8 @@ void estimate_armature_change_PSO(const array<double,dimensions> para, dhArmatur
 
     arm->Update();
     Fp->Update();
-    mesh1->Update();
-    mesh2->Update();
+    ssd->Update();
+    objMesh->Update();
 
 }
 
@@ -414,8 +437,8 @@ void update_velocities(particles positions, particles& velocities,
 }
 
 //粒子群最適化法(PSO)による最終姿勢生成
-void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp,
-                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age){
+void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
+                            dhMesh* handMesh, dhMesh* objMesh, int age){
     //粒子法の設定部
     double scope_min = -70;
     double scope_max = 70;
@@ -478,8 +501,15 @@ void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp,
     vector<vector<QString>> DF;
     vector<alphashape> ashape_all;
 
+    vector<vector<QString>> MP;
+    vector<vector<QString>> color_def;
+    vector<vector<QString>> area_to_bone;
+
+    prepare_forceClosure(MP, color_def, area_to_bone);
     prepare_romeval(joints_list, joint_bone, DF, ashape_all, age);
-    Parameter pp = { 70, 2, 710, arm, Fp, mesh1, mesh2, joints_list, joint_bone, DF, ashape_all};
+
+    Parameter pp = { 70, 2, 710, 2000, arm, Fp, ssd, handMesh, objMesh,
+                     joints_list, joint_bone, DF, ashape_all, MP, color_def, area_to_bone};
 
     //パーソナルベスト位置，値，グローバルベスト位置の初期化
     particles PersonalBest = positions;

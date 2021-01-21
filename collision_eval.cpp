@@ -11,7 +11,6 @@
 #include "dhFeaturePoint.h"
 #include "dhSkeletalSubspaceDeformation.h"
 #include "dhcontact.h"
-#include "segment.h"
 #include "collision_eval.hpp"
 
 
@@ -39,11 +38,11 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
 
     computeContactRegion(bodyPoints,objectPoints,mesh1,mesh2);
 
-    dhBone* root;
-    root = dhnew<dhBone>();
+    dhBone* link;
+    link = dhnew<dhBone>();
     vector<QString> bones;
     vector<int>     depths;
-    getArmatureStructure(arm,bones,depths,root);
+    getArmatureStructure(arm, link, bones, depths);
 
     segment* points_obj;
     points_obj = new segment[bones.size()];
@@ -53,7 +52,12 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     segmentObjectPoints(objectPoints,points_obj,arm,bones);
 
     for(int index=0; index<bones.size(); index++){      //getCoGsに相当
-        points_obj[index].getCoGs(points_obj,cog_obj,index,keys_obj);
+        if(points_obj[index].ObjectPoints.empty() == true){;
+        }
+        else{
+            cog_obj.push_back(points_obj[index].ObjectCoG);
+            keys_obj.push_back(index);
+        }
     }
 
 
@@ -74,7 +78,12 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     segmentObjectPoints(bodyPoints,points_hand,arm,bones);
 
     for(int index=0; index<bones.size(); index++){      //getCoGsに相当
-        points_hand[index].getCoGs(points_hand,cog_hand,index,keys_hand);
+        if(points_hand[index].ObjectPoints.empty() == true){;
+        }
+        else{
+            cog_hand.push_back(points_hand[index].ObjectCoG);
+            keys_hand.push_back(index);
+        }
     }
 
 //    for(int k=0; k<cog_hand.size(); k++){         // CoGとそのbone名を出力(ハンドモデル側)
@@ -106,7 +115,7 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     }
 
 
-    //ハンドモデルについて，干渉点から物体表面までの距離が10mm未満の場合にはその点を除外する
+    //ハンドモデルについて，干渉点から物体表面までの距離が5mm未満の場合にはその点を除外する
     vector<vector<dhVec3>> points_hand2;
 
     for(int i=0; i<keys_hand.size(); i++){
@@ -189,7 +198,7 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     delete[] points_hand;
 
 
-    dhdelete(root);
+    dhdelete(link);
 
     dhdelete(bodyPoints);
     dhdelete(objectPoints);
