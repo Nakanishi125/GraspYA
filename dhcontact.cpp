@@ -172,10 +172,10 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
         segm[area].BodyColor.push_back(color_def[area][3].toInt());
     }
 
-    for(int i=0; i<contactPoints->PointCount(); i++){   //メンバ変数BodyPointsへの代入
-        int PointID = contactPoints->refID(i);
+    for(int i=0; i<contactPoints->PointCount(); i++){           //全接触点を適切な領域に所属させていく
+        int PointID = contactPoints->refID(i);                      //以降，メンバ変数BodyPointsへの代入
 
-        dhVec3 point_color(bodyMesh->Vi(PointID)->color(0),
+        dhVec3 point_color(bodyMesh->Vi(PointID)->color(0),         //頂点が接触しているbodyMeshの色を抽出する
                            bodyMesh->Vi(PointID)->color(1),
                            bodyMesh->Vi(PointID)->color(2));
 
@@ -198,7 +198,7 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
             segm[area].BodyPointsID.clear();
         }
 
-        dhVec3 sum_points;
+        dhVec3 sum_points;          //ここからメンバ変数BodyCoGへの代入
         int points_num = segm[area].BodyPointsID.size();
         if(points_num){
             for(int j=0; j<points_num; j++){
@@ -206,9 +206,20 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
                 sum_points = sum_points + point_pos;
             }
 
+            //(1領域における全座標の重心)
             dhVec3 cogs(sum_points[0]/points_num, sum_points[1]/points_num, sum_points[2]/points_num);
+            double mindist = DBL_MAX;
+            dhVec3 nearcogs, nearcogs_norm;
 
-            segm[area].BodyCoG = cogs;          //メンバ変数BodyCoGへの代入(1領域における全座標の重心)
+            for(int j=0; j<points_num; j++){        //重心に一番近い点をCoGとし，メンバ変数BodyCoGとBodyCog_Normalに代入
+                double dist = ( bodySSD->V(segm[area].BodyPointsID[j]).toVec3() - cogs ).norm();
+                if(dist < mindist){
+                    nearcogs      = bodySSD->Vi(segm[area].BodyPointsID[j])->pt.toVec3();
+                    nearcogs_norm = bodySSD->Vi(segm[area].BodyPointsID[j])->normal.toVec3();
+                }
+            }
+            segm[area].BodyCoG = nearcogs;
+            segm[area].BodyCoG_Normal = nearcogs_norm;
 
             double dist_min = std::numeric_limits<float>::infinity();   //初期値に無限大を代入
             for(int m=0; m<objMesh->Nv(); m++){

@@ -12,6 +12,7 @@ struct segment
     vector<int> BodyColor;
     vector<int> BodyPointsID;
     dhVec3 BodyCoG;
+    dhVec3 BodyCoG_Normal;
 
     vector<dhVec3> ObjectPoints;
     int ObjectPointsID;

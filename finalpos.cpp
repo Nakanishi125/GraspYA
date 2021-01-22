@@ -74,7 +74,7 @@ double func_estimate(const gsl_vector *v,void *params){
     double estimate_func =    dp->par1*coord_eval(dp->Fp)
                             + dp->par2*rom_eval(dp->arm,dp->jl,dp->jb,dp->DF,dp->as)
                             + dp->par3*collision_eval(dp->ssd, dp->objMesh, dp->arm)
-                            - dp->par4*forceClosure_eval(dp->arm, dp->ssd, dp->handMesh, dp->objMesh,
+                            + dp->par4*forceClosure_eval(dp->arm, dp->ssd, dp->handMesh, dp->objMesh,
                                                          dp->MP, dp->color_def, dp->area_to_bone);
 
 

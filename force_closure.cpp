@@ -142,26 +142,35 @@ vector<vector<double>> ComputeFrictionMatrix(dhArmature* arm, segment* segm, vec
                                    0, 0, 1);
 
 
-    for(int area=0; area<contact_bones.size(); area++){
+    for(int area=0; area<contact_areas.size(); area++){
 
-//ここから変更
-        dhMat33 coord = arm->bone(contact_bones[area])->Twj.toMat33();
+        //さらに変更ここから
 
-                                                //　(同次変換行列)×(グローバル座標系y方向)
-        dhVec3 finger_x = coord.column(0);      //グローバル座標系から見た指のx座標
-        dhVec3 finger_y = coord.column(1);      //グローバル座標系から見た指のy座標(軸方向)
-        dhVec3 finger_z = coord.column(2);      //グローバル座標系から見た指のz座標
+        dhVec3 fricConeHeight = segm[contact_areas[area]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
+        fricConeHeight.normalize();
 
+        dhVec3 fricCone_x(1, 0, -fricConeHeight[0]/fricConeHeight[2]);      //y方向を0とする．
+        fricCone_x.normalize();
 
-        dhMat33 z1 = RotateAroundAxis(finger_z, theta+M_PI/2).toMat33();
-        dhMat33 z2 = RotateAroundAxis(finger_z,-(theta+M_PI/2)).toMat33();
-        dhMat33 z3 = RotateAroundAxis(finger_x, theta+M_PI/2).toMat33();
-        dhMat33 z4 = RotateAroundAxis(finger_x,-(theta+M_PI/2)).toMat33();
+        double zz = -1/(fricCone_x[2]);
+        double yy = -fricConeHeight[0]/fricConeHeight[1] - zz*fricConeHeight[2]/fricConeHeight[1];
 
-        dhVec3 n1 = z1*finger_y;
-        dhVec3 n2 = z2*finger_y;
-        dhVec3 n3 = z3*finger_y;
-        dhVec3 n4 = z4*finger_y;
+        dhVec3 fricCone_z(1, yy, zz);
+        fricCone_z.normalize();
+
+//        DH_LOG("coord1:"+QString::number(fricConeHeight[0])+","+QString::number(fricConeHeight[1])+","+QString::number(fricConeHeight[2]),0);
+//        DH_LOG("coord2:"+QString::number(fricCone_x[0])+","+QString::number(fricCone_x[1])+","+QString::number(fricCone_x[2]),0);
+//        DH_LOG("coord3:"+QString::number(fricCone_z[0])+","+QString::number(fricCone_z[1])+","+QString::number(fricCone_z[2]),0);
+
+        dhMat33 z1 = RotateAroundAxis(fricCone_z, theta+M_PI/2).toMat33();
+        dhMat33 z2 = RotateAroundAxis(fricCone_z,-(theta+M_PI/2)).toMat33();
+        dhMat33 z3 = RotateAroundAxis(fricCone_x, theta+M_PI/2).toMat33();
+        dhMat33 z4 = RotateAroundAxis(fricCone_x,-(theta+M_PI/2)).toMat33();
+
+        dhVec3 n1 = z1*fricConeHeight;
+        dhVec3 n2 = z2*fricConeHeight;
+        dhVec3 n3 = z3*fricConeHeight;
+        dhVec3 n4 = z4*fricConeHeight;
 
         FrictionMatrix[4*area][3*area]     = n1[0];
         FrictionMatrix[4*area][3*area+1]   = n1[1];
@@ -175,6 +184,42 @@ vector<vector<double>> ComputeFrictionMatrix(dhArmature* arm, segment* segm, vec
         FrictionMatrix[4*area+3][3*area]   = n4[0];
         FrictionMatrix[4*area+3][3*area+1] = n4[1];
         FrictionMatrix[4*area+3][3*area+2] = n4[2];
+        //ここまで
+
+
+
+
+//ここから変更
+//        dhMat33 coord = arm->bone(contact_bones[area])->Twj.toMat33();
+
+//                                                //　(同次変換行列)×(グローバル座標系y方向)
+//        dhVec3 finger_x = coord.column(0);      //グローバル座標系から見た指のx座標
+//        dhVec3 finger_y = coord.column(1);      //グローバル座標系から見た指のy座標(軸方向)
+//        dhVec3 finger_z = coord.column(2);      //グローバル座標系から見た指のz座標
+
+
+//        dhMat33 z1 = RotateAroundAxis(finger_z, theta+M_PI/2).toMat33();
+//        dhMat33 z2 = RotateAroundAxis(finger_z,-(theta+M_PI/2)).toMat33();
+//        dhMat33 z3 = RotateAroundAxis(finger_x, theta+M_PI/2).toMat33();
+//        dhMat33 z4 = RotateAroundAxis(finger_x,-(theta+M_PI/2)).toMat33();
+
+//        dhVec3 n1 = z1*finger_y;
+//        dhVec3 n2 = z2*finger_y;
+//        dhVec3 n3 = z3*finger_y;
+//        dhVec3 n4 = z4*finger_y;
+
+//        FrictionMatrix[4*area][3*area]     = n1[0];
+//        FrictionMatrix[4*area][3*area+1]   = n1[1];
+//        FrictionMatrix[4*area][3*area+2]   = n1[2];
+//        FrictionMatrix[4*area+1][3*area]   = n2[0];
+//        FrictionMatrix[4*area+1][3*area+1] = n2[1];
+//        FrictionMatrix[4*area+1][3*area+2] = n2[2];
+//        FrictionMatrix[4*area+2][3*area]   = n3[0];
+//        FrictionMatrix[4*area+2][3*area+1] = n3[1];
+//        FrictionMatrix[4*area+2][3*area+2] = n3[2];
+//        FrictionMatrix[4*area+3][3*area]   = n4[0];
+//        FrictionMatrix[4*area+3][3*area+1] = n4[1];
+//        FrictionMatrix[4*area+3][3*area+2] = n4[2];
 //ここまで
 
 //        if(segm[area].ObjectCoG[1] > 0){
@@ -570,7 +615,7 @@ double GLPK_solve_LP1(vector<vector<double>> left, vector<double> right, vector<
     glp_load_matrix(lp, cnt, ia, ja, ar);
     glp_simplex(lp, NULL);
     z = glp_get_obj_val(lp);
-    DH_LOG("grasp margin is "+QString::number(z),0);
+//    DH_LOG("LP1 value is "+QString::number(z),0);
 //    for(size_t j=1; j<=left[0].size(); j++){
 //        x.push_back(glp_get_col_prim(lp,j));
 //        DH_LOG(QString::number(glp_get_col_prim(lp, j)),0);
@@ -618,11 +663,11 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
     glp_load_matrix(lp, cnt, ia, ja, ar);
     glp_simplex(lp, NULL);
     z = glp_get_obj_val(lp);
-    DH_LOG("LP2 value is "+QString::number(z),0);
-    for(size_t j=1; j<=left[0].size(); j++){
-        x.push_back(glp_get_col_prim(lp,j));
-        DH_LOG(QString::number(glp_get_col_prim(lp, j)),0);
-    }
+//    DH_LOG("LP2 value is "+QString::number(z),0);
+//    for(size_t j=1; j<=left[0].size(); j++){
+//        x.push_back(glp_get_col_prim(lp,j));
+//        DH_LOG(QString::number(glp_get_col_prim(lp, j)),0);
+//    }
 
     return z;
 
@@ -646,12 +691,12 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     bone_index["RMP"] = 15;     bone_index["RDP"] = 16;     bone_index["PMCP"] =17;
     bone_index["PPP"] = 18;     bone_index["PMP"] = 19;     bone_index["PDP"] = 20;
 
-    double friction_coefficient = 3.0;
+    double friction_coefficient = 1.0;
 
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
 
-    vector<double> mg = {0,0,-4.26};
+    vector<double> mg = {0,-4.26,0};
 
     vector<vector<int>> DoFs = { {}, {}, {0,2}, {0,2}, {0}, {}, {0,2}, {0}, {0}, {}, {0,2}, {0},{0},
                                  {}, {0,2}, {0}, {0}, {}, {0,2}, {0}, {0}};
@@ -678,10 +723,10 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
         }
     }
     vector<QString> contact_bones;
-    DH_LOG("contact_bones",0);
+//    DH_LOG("contact_bones",0);
     for(size_t i=0; i<areas.size(); i++){       //上で抽出したareaに対応するboneをcontact_bonesに格納
         contact_bones.push_back(area_to_bone[areas[i]][1]);
-        DH_LOG(contact_bones[i],0);
+//        DH_LOG(contact_bones[i],0);
     }
 
     if(contact_bones.size() == 0){
@@ -736,32 +781,20 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     fc_lp1 = GLPK_solve_LP1(left_lp1,right_lp1,GraspMatrix,coef_lp1);
     if(fc_lp1 == 0){
         DH_LOG("Force Closure does not exist.",0);
-        FCeval = 0;
+        FCeval = 1.0;
     }
     else{
-        DH_LOG("The value is "+QString::number(fc_lp1),0);
-        if(fc_lp1<0.2){
-            FCeval = 25*fc_lp1*fc_lp1;
+        fc_lp2 = GLPK_solve_LP2(left_lp2, right_lp2, coef_lp2, GraspMatrix, ContactJacobian);
+        if(fc_lp2 >= 0.2){
+            DH_LOG("Force Closure exist.",0);
+            FCeval = 0.0;
         }
-        else{
-            FCeval = 1;
+        else if(fc_lp2 < 0.2){
+            DH_LOG("Force Closure exist!",0);
+            FCeval = 1.0 - 25*fc_lp2*fc_lp2;
         }
     }
-//    else{
-//        fc_lp2 = GLPK_solve_LP2(left_lp2, right_lp2, coef_lp2, GraspMatrix, ContactJacobian);
-//        if(fc_lp2 == 0){
-//            DH_LOG("Force Closure is does not exist.",0);
-//            FCeval = 0;
-//        }
-//        else if(fc_lp2 < 0.2){
-//            DH_LOG("Force closure complete!",0);
-//            FCeval = 25*fc_lp2*fc_lp2;
-//        }
-//        else{
-//            DH_LOG("Force closure complete!",0);
-//            FCeval = 1.0;
-//        }
-//    }
+    DH_LOG("Evaluate-value is "+QString::number(fc_lp2)+"->"+QString::number(FCeval),0);
 
     dhdelete(bodyPoints);
     dhdelete(objectPoints);

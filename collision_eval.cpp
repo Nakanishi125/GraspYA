@@ -203,7 +203,7 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     dhdelete(bodyPoints);
     dhdelete(objectPoints);
 
-    DH_LOG(QString::number(Volume),0);
+//    DH_LOG(QString::number(Volume),0);
 
     return Volume/(size*size*size);
 //    return Volume/(551.99*551.99*551.99);
