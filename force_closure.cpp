@@ -3,14 +3,16 @@
 #include"csv.hpp"
 #include"dhcontact.h"
 #include"force_closure.hpp"
+#include"dhShapeBox.h"
 #include"glpk.h"
 
 
 void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& color_def,
-                          vector<vector<QString>>& area_to_bone)
+                          vector<vector<QString>>& area_to_bone, double& coef, int age)
 {
     QString mppath = "C:\\kenkyu\\ForceClosure\\csv\\MPdata0302.csv";
-    QString parapath = "C:\\kenkyu\\ForceClosure\\csv\\max_muscle_force_0302_para.csv";
+    QString rstpath = "C:\\kenkyu\\MuscleRestrict\\strength_age.csv";
+//    QString parapath = "C:\\kenkyu\\ForceClosure\\csv\\max_muscle_force_0302_para.csv";
 
 //MPdata0302.csvの読み込み==========================
     Csv csvmp(mppath);
@@ -20,16 +22,27 @@ void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& 
     }
 //================================================
 
-//max_muscle_force_0302_para.csvの読み込み===========
-    vector<vector<QString>> MP_para;
-    Csv csvpara(parapath);
-    if(!csvpara.getCsv(MP_para)){
+//strength_age.csvの読み込み===========
+    vector<vector<QString>> MP_rst;
+    Csv csvpara(rstpath);
+    if(!csvpara.getCsv(MP_rst)){
         DH_LOG("failed to read the file",0);
         return ;
     }
-    MP_para.erase(MP_para.begin());
+    MP_rst.erase(MP_rst.begin());
 
 //=================================================
+
+////max_muscle_force_0302_para.csvの読み込み===========
+//    vector<vector<QString>> MP_para;
+//    Csv csvpara(parapath);
+//    if(!csvpara.getCsv(MP_para)){
+//        DH_LOG("failed to read the file",0);
+//        return ;
+//    }
+//    MP_para.erase(MP_para.begin());
+
+////=================================================
 
 //==ハンドモデルの領域の色情報取得======================================================
     QString list = "C:\\kenkyu\\ForceClosure\\csv\\def_color_area.csv";
@@ -51,20 +64,50 @@ void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& 
     area_to_bone.erase(area_to_bone.begin());
 //================================================================================
 
+    //加齢による筋力制限をかける
+    double rst;
+    for(size_t row=0; row<MP_rst.size(); row++){
+        if(MP_rst[row][0].toInt() == age){
+            rst = MP_rst[row][1].toDouble()/100;
+            break;
+        }
+    }
 
-    //最大筋張力×筋活動度
-    for(size_t i=0; i<MP_para.size(); i++){
-        for(size_t j=2; j<MP[0].size(); j++){        //最初2列は行名
-            if(MP[0][j].contains(MP_para[i][0])){
-                for(size_t k=1; k<MP.size(); k++){       //最初1行は筋肉名
-                    if(MP[k][j] != "Nan"){
-                        double force = MP_para[i][1].toDouble() * MP[k][j].toDouble();
-                        MP[k][j] = QString::number(force);
-                    }
-                }
+    for(size_t i=1; i<MP.size(); i++){
+        for(size_t j=2; j<MP[0].size(); j++){
+            if(MP[i][j] != "Nan"){
+                double force = MP[i][j].toDouble()*rst;
+                MP[i][j] = QString::number(force);
             }
         }
     }
+
+    //加齢による摩擦係数制限をかける
+    const int MAX_AGE = 80;                 //[Mabuchi 2018]の論文データ
+    const int MIN_AGE = 20;                 //最大値0.55を1とし，割合として扱えるように
+    const double MAX_RATE = 1.0;
+    const double MIN_RATE = 0.15/0.55;
+
+    if(age<80){
+        coef = (MAX_RATE-MIN_RATE)*(age-MIN_AGE)/(MAX_AGE-MIN_AGE) + MAX_RATE;
+    }
+    else{
+        coef = MIN_RATE;
+    }
+
+//    //最大緊張力×制限率 ->　muscle_para用
+//    for(size_t i=0; i<MP_para.size(); i++){
+//        for(size_t j=2; j<MP[0].size(); j++){        //最初2列は行名
+//            if(MP[0][j].contains(MP_para[i][0])){
+//                for(size_t k=1; k<MP.size(); k++){       //最初1行は筋肉名
+//                    if(MP[k][j] != "Nan"){
+//                        double force = MP_para[i][1].toDouble() * MP[k][j].toDouble();
+//                        MP[k][j] = QString::number(force);
+//                    }
+//                }
+//            }
+//        }
+//    }
 //    //確認用
 //    for(size_t i=0; i<MP.size(); i++){
 //        for(size_t j=0; j<MP[0].size(); j++){
@@ -131,20 +174,13 @@ void GetJacobianBones(dhArmature* arm, vector<QString> bones, vector<QString> co
 
 
 
-vector<vector<double>> ComputeFrictionMatrix(dhArmature* arm, segment* segm, vector<int> contact_areas,
-                                             vector<QString> contact_bones, double friction_coefficient)
+vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_areas, double friction_coefficient)
 {
     vector<vector<double>> FrictionMatrix(4*contact_areas.size(),vector<double>(3*contact_areas.size()));
     double theta = atan(friction_coefficient);
-    dhVec3 vertical_vector;
-    const dhMat33 global_direction(1, 0, 0,
-                                   0, 1, 0,
-                                   0, 0, 1);
 
 
     for(int area=0; area<contact_areas.size(); area++){
-
-        //さらに変更ここから
 
         dhVec3 fricConeHeight = segm[contact_areas[area]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
         fricConeHeight.normalize();
@@ -184,9 +220,6 @@ vector<vector<double>> ComputeFrictionMatrix(dhArmature* arm, segment* segm, vec
         FrictionMatrix[4*area+3][3*area]   = n4[0];
         FrictionMatrix[4*area+3][3*area+1] = n4[1];
         FrictionMatrix[4*area+3][3*area+2] = n4[2];
-        //ここまで
-
-
 
 
 //ここから変更
@@ -222,46 +255,13 @@ vector<vector<double>> ComputeFrictionMatrix(dhArmature* arm, segment* segm, vec
 //        FrictionMatrix[4*area+3][3*area+2] = n4[2];
 //ここまで
 
-//        if(segm[area].ObjectCoG[1] > 0){
-//            vertical_vector[0] = 0;
-//            vertical_vector[1] = -1;
-//            vertical_vector[2] = 0;
-//        }
-//        else{
-//            vertical_vector[0] = 0;
-//            vertical_vector[1] = 1;
-//            vertical_vector[2] = 0;
-//        }
-
-//        dhMat33 z1 = RotateAroundAxis(global_direction.row(2), theta+M_PI/2).toMat33();
-//        dhMat33 z2 = RotateAroundAxis(global_direction.row(2),-(theta+M_PI/2)).toMat33();
-//        dhMat33 z3 = RotateAroundAxis(global_direction.row(0), theta+M_PI/2).toMat33();
-//        dhMat33 z4 = RotateAroundAxis(global_direction.row(0),-(theta+M_PI/2)).toMat33();
-
-//        dhVec3 n1 = z1*vertical_vector;
-//        dhVec3 n2 = z2*vertical_vector;
-//        dhVec3 n3 = z3*vertical_vector;
-//        dhVec3 n4 = z4*vertical_vector;
-
-//        FrictionMatrix[4*area][3*area]     = n1[0];
-//        FrictionMatrix[4*area][3*area+1]   = n1[1];
-//        FrictionMatrix[4*area][3*area+2]   = n1[2];
-//        FrictionMatrix[4*area+1][3*area]   = n2[0];
-//        FrictionMatrix[4*area+1][3*area+1] = n2[1];
-//        FrictionMatrix[4*area+1][3*area+2] = n2[2];
-//        FrictionMatrix[4*area+2][3*area]   = n3[0];
-//        FrictionMatrix[4*area+2][3*area+1] = n3[1];
-//        FrictionMatrix[4*area+2][3*area+2] = n3[2];
-//        FrictionMatrix[4*area+3][3*area]   = n4[0];
-//        FrictionMatrix[4*area+3][3*area+1] = n4[1];
-//        FrictionMatrix[4*area+3][3*area+2] = n4[2];
     }
 
     return FrictionMatrix;
 }
 
 
-vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas, vector<double> object_center)
+vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas, dhVec3 object_center)
 {
     vector<vector<double>> GraspMatrix(6,vector<double>(3*contact_areas.size()));
 
@@ -664,9 +664,9 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
     glp_simplex(lp, NULL);
     z = glp_get_obj_val(lp);
 //    DH_LOG("LP2 value is "+QString::number(z),0);
-//    for(size_t j=1; j<=left[0].size(); j++){
+//    for(size_t j=1; j<=G[0].size(); j++){
 //        x.push_back(glp_get_col_prim(lp,j));
-//        DH_LOG(QString::number(glp_get_col_prim(lp, j)),0);
+//        DH_LOG("f"+QString::number(j)+":"+QString::number(glp_get_col_prim(lp, j)),0);
 //    }
 
     return z;
@@ -678,9 +678,11 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
 double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
                          dhMesh* bodyMesh, dhMesh* objMesh,
                          vector<vector<QString>> MP, vector<vector<QString>> color_def,
-                         vector<vector<QString>> area_to_bone)
+                         vector<vector<QString>> area_to_bone, dhPointCloudAsVertexRef* &bodyPoints,
+                         double coef)
 {
     double FCeval;
+    double fric_coef_young = 1.0;
 
     map<QString, int> bone_index;
     bone_index["ROOT"] = 0;     bone_index["CP"] = 1;       bone_index["TMCP"] = 2;
@@ -691,17 +693,16 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     bone_index["RMP"] = 15;     bone_index["RDP"] = 16;     bone_index["PMCP"] =17;
     bone_index["PPP"] = 18;     bone_index["PMP"] = 19;     bone_index["PDP"] = 20;
 
-    double friction_coefficient = 1.0;
-
-    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
-    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
+    double friction_coefficient = fric_coef_young*coef;
 
     vector<double> mg = {0,-4.26,0};
 
     vector<vector<int>> DoFs = { {}, {}, {0,2}, {0,2}, {0}, {}, {0,2}, {0}, {0}, {}, {0,2}, {0},{0},
                                  {}, {0,2}, {0}, {0}, {}, {0,2}, {0}, {0}};
 
-    vector<double> object_center = {15, 15, 75};       //後でAPIから関数探す
+    dhVec3 object_center(15, 15, 75);       //後でAPIから関数探す
+
+
                                                         //グローバル座標系
     vector<int> areas;      //　↓areas定義
     for(size_t i=0; i<color_def.size(); i++)    areas.push_back(color_def[i][0].toInt());
@@ -709,13 +710,12 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     segment *segm;
     segm = new segment[areas.size()];
 
-    computeContactRegion(bodyPoints, objectPoints, bodySSD, objMesh);
     segmentBodyPoints_muscle(bodyPoints, bodySSD, bodyMesh, objMesh, color_def, segm);
 
-    areas.erase(areas.begin()+areas.size()-1);  //34は対応するboneないので削除
+    areas.erase(areas.begin()+areas.size()-1);     //34は対応するboneないので削除
     size_t orgsize = areas.size();
     int sub=0;
-    for(size_t area=0; area<orgsize; area++){      //接触が無い部分のareaを削除する      //has been debugged
+    for(size_t area=0; area<orgsize; area++){      //接触が無い部分のareaを削除する
         if(segm[area].BodyPointsID.empty()){
             int inc = area - sub;
             ++sub;
@@ -750,7 +750,7 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 
 
     vector<vector<double>> GraspMatrix = ComputeGraspMatrix(segm, areas, object_center);
-    vector<vector<double>> FrictionMatrix = ComputeFrictionMatrix(arm, segm, areas,contact_bones, friction_coefficient);
+    vector<vector<double>> FrictionMatrix = ComputeFrictionMatrix(segm, areas, friction_coefficient);
     vector<double> eT = GetBoundMatrix(arm, contact_bones);
     vector<vector<double>> ContactJacobian = ComputeContactJacobian(arm, bone_index, JacobianBones, DoFs,
                                                   contact_bones, areas, segm);
@@ -780,24 +780,21 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     double fc_lp1, fc_lp2;
     fc_lp1 = GLPK_solve_LP1(left_lp1,right_lp1,GraspMatrix,coef_lp1);
     if(fc_lp1 == 0){
-        DH_LOG("Force Closure does not exist.",0);
+//        DH_LOG("Form Closure does not exist.",0);
         FCeval = 1.0;
     }
     else{
         fc_lp2 = GLPK_solve_LP2(left_lp2, right_lp2, coef_lp2, GraspMatrix, ContactJacobian);
         if(fc_lp2 >= 0.2){
-            DH_LOG("Force Closure exist.",0);
+//            DH_LOG("Force Closure exist.",0);
             FCeval = 0.0;
         }
         else if(fc_lp2 < 0.2){
-            DH_LOG("Force Closure exist!",0);
+//            DH_LOG("Force Closure exist.",0);
             FCeval = 1.0 - 25*fc_lp2*fc_lp2;
         }
     }
     DH_LOG("Evaluate-value is "+QString::number(fc_lp2)+"->"+QString::number(FCeval),0);
-
-    dhdelete(bodyPoints);
-    dhdelete(objectPoints);
 
     return FCeval;
 }

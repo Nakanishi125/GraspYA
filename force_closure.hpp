@@ -7,17 +7,16 @@
 
 
 void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& color_def,
-                          vector<vector<QString>>& area_to_bone);
+                          vector<vector<QString>>& area_to_bone, double& coef, int age);
 
 dhMat44 RotateAroundAxis(dhVec3 axis, double theta);
 
 void GetJacobianBones(dhArmature* arm, vector<QString> bones, vector<QString> contact_bones,
                       vector<QString>& JacobianBones);
 
-vector<vector<double>> ComputeFrictionMatrix(dhArmature* arm, segment* segm, vector<int> contact_areas,
-                                             vector<QString> contact_bones, double friction_coefficient);
+vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_areas, double friction_coefficient);
 
-vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas, vector<double> object_center);
+vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas, dhVec3 object_center);
 
 vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int> bone_index ,
                                               vector<QString> JacobianBones, vector<vector<int>> DoFs,
@@ -44,6 +43,7 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
 double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
                          dhMesh* bodyMesh, dhMesh* objMesh,
                          vector<vector<QString>> MP, vector<vector<QString>> color_def,
-                         vector<vector<QString>> area_to_bone);
+                         vector<vector<QString>> area_to_bone, dhPointCloudAsVertexRef* &bodyPoints,
+                         double coef);
 
 #endif // FORCE_CLOSURE_HPP

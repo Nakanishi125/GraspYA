@@ -15,8 +15,11 @@
 #include "dhSkeletalSubspaceDeformation.h"
 #include "dhcontact.h"
 
+void extract_contactPoints(dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh,
+                           dhPointCloudAsVertexRef* &bodyPoints, dhPointCloudAsVertexRef* &objectPoints);
 
-double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
+double collision_eval(dhArmature* arm, dhPointCloudAsVertexRef* &bodyPoints,
+                      dhPointCloudAsVertexRef* &objectPoints);
 
 double hand_length(dhArmature* arm);
 

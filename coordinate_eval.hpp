@@ -11,9 +11,12 @@
 #include"dhMath.h"
 #include"dhFeaturePoint.h"
 
-float coord_eval(dhFeaturePoints* Fp);
 
+void prepare_coordeval(dhFeaturePoints* Fp, vector<vector<QString>>& ObjPs,
+                       vector<vector<QString>>& ObjPs_normal, QStringList& fpname);
 
+float coord_eval(dhFeaturePoints* Fp, const vector<vector<QString>>& ObjPs,
+                 const vector<vector<QString>>& ObjPs_normal, const QStringList& fpname);
 
 
 #endif // COORDINATE_EVAL_HPP

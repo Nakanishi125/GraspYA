@@ -16,8 +16,17 @@
 
 using namespace std;
 
+//先に接触点群を抽出しておく関数
+void extract_contactPoints(dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh,
+                           dhPointCloudAsVertexRef* &bodyPoints, dhPointCloudAsVertexRef* &objectPoints)
+{
+    computeContactRegion(bodyPoints,objectPoints,ssd,objMesh);
+}
 
-double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm){
+
+
+double collision_eval(dhArmature* arm, dhPointCloudAsVertexRef* &bodyPoints,
+                      dhPointCloudAsVertexRef* &objectPoints){
 
     map<int,string> bone_index;
     bone_index[0] = "ROOT";     bone_index[1] = "CP";       bone_index[2] = "TMCP";
@@ -30,13 +39,13 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
 
     double size = hand_length(arm);
 
-//    DH_LOG("mesh1 is "+QString::number(mesh1->PointCount()),0);
-//    DH_LOG("mesh2 is "+QString::number(mesh2->PointCount()),0);
+//    DH_LOG("ssd is "+QString::number(ssd->PointCount()),0);
+//    DH_LOG("objMesh is "+QString::number(objMesh->PointCount()),0);
 
-    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
-    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
+//    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
+//    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
 
-    computeContactRegion(bodyPoints,objectPoints,mesh1,mesh2);
+//    computeContactRegion(bodyPoints,objectPoints,ssd,objMesh);
 
     dhBone* link;
     link = dhnew<dhBone>();
@@ -59,7 +68,6 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
             keys_obj.push_back(index);
         }
     }
-
 
 //        for(int k=0; k<cog_obj.size(); k++){          // CoGとそのbone名を出力(物体側)
 //            dhVec3 tmp = cog_obj[k];
@@ -200,8 +208,8 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
 
     dhdelete(link);
 
-    dhdelete(bodyPoints);
-    dhdelete(objectPoints);
+//    dhdelete(bodyPoints);
+//    dhdelete(objectPoints);
 
 //    DH_LOG(QString::number(Volume),0);
 

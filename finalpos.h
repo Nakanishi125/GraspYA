@@ -70,13 +70,23 @@ struct Parameter{
     double par1;    double par2;    double par3;    double par4;
     dhArmature* arm;    dhFeaturePoints* Fp;
     dhSkeletalSubspaceDeformation* ssd;    dhMesh* handMesh;    dhMesh* objMesh;
+    //ROM_eval関連
     vector<vector<QString>> jl;
     vector<vector<QString>> jb;
     vector<vector<QString>> DF;
     vector<alphashape> as;
+    //Coord_eval関連
+    vector<vector<QString>> ObjPs;
+    vector<vector<QString>> ObjPs_normal;
+    QStringList fpname;
+    //Collision_eval関連
+    dhPointCloudAsVertexRef* bodyPoints;
+    dhPointCloudAsVertexRef* objectPoints;
+    //ForceClosure関連
     vector<vector<QString>> MP;
     vector<vector<QString>> color_def;
     vector<vector<QString>> area_to_bone;
+    double coef;
 };
 
 vector<double> Rot2Euler(const dhMath::dhMat33 Mat);

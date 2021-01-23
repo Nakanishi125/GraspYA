@@ -61,7 +61,9 @@ public slots:
     void Extract_maxmin(QString in);
     double RoM_evaluation(dhArmature* arm, int age);
     double Coordinate_evaluation(dhFeaturePoints* Fp);
-    double Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
+    double Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh, dhArmature* arm);
+    double ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
+                                                           dhMesh* bodyMesh, dhMesh* objMesh, int age);
     void FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
                              dhMesh* handMesh, dhMesh* objMesh, int age);
 

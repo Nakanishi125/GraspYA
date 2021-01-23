@@ -10,8 +10,10 @@
 
 using namespace std;
 
-float coord_eval(dhFeaturePoints* Fp){
 
+void prepare_coordeval(dhFeaturePoints* Fp,vector<vector<QString>>& ObjPs,
+                       vector<vector<QString>>& ObjPs_normal, QStringList& fpname)
+{
 //    QString fpname[] = {"16-a","16-b","16-c","02-a","02-b","02-c","05-a","05-b","05-c",       //母指側面利用
 //                        "11-a","11-b","11-c","08-a","08-b","08-c",
 //                        };
@@ -20,20 +22,18 @@ float coord_eval(dhFeaturePoints* Fp){
 //                        };
 
 
-    QStringList fpname = Fp->allPointNames();
+    fpname = Fp->allPointNames();
 
-    const int L = 180;
 
 // ===========================
 // ObjectPoints3.csvの読み込み
 // ==========================
     QString list = "C:\\kenkyu\\GraspYA\\data\\ObjectPoints3.csv";
-    vector<vector<QString>> ObjPs;       //これにデータ代入
 
     Csv Obj(list);
     if(!Obj.getCsv(ObjPs)){
         cout << "cannot read" << endl;
-        return 1;
+        return ;
     }
 
     ObjPs.erase(ObjPs.begin());
@@ -51,12 +51,11 @@ float coord_eval(dhFeaturePoints* Fp){
 //ObjectNormalvecs3.csvの読み込み
 //==============================
     QString list_normal = "C:\\kenkyu\\GraspYA\\data\\ObjectNormalvecs3.csv";
-    vector<vector<QString>> ObjPs_normal;    //これにデータ代入
 
     Csv Obj_normal(list_normal);
     if(!Obj_normal.getCsv(ObjPs_normal)){
         cout << "cannot read" << endl;
-        return 1;
+        return ;
     }
 
     ObjPs_normal.erase(ObjPs_normal.begin());
@@ -70,7 +69,14 @@ float coord_eval(dhFeaturePoints* Fp){
             cout << endl;
     } */
 
-// ********************************************************************************************
+}
+
+
+
+float coord_eval(dhFeaturePoints* Fp, const vector<vector<QString>>& ObjPs,
+                 const vector<vector<QString>>& ObjPs_normal, const QStringList& fpname){
+
+    const int L = 180;
 
     double sum_length = 0;
     double sum_rad = 0;

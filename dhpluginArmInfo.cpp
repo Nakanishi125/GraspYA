@@ -232,12 +232,46 @@ double dhArmOpe::RoM_evaluation(dhArmature* arm, int age)
 
 double dhArmOpe::Coordinate_evaluation(dhFeaturePoints* fp)
 {
-    return coord_eval(fp);
+    vector<vector<QString>> ObjPs;
+    vector<vector<QString>> ObjPs_normal;
+    QStringList fpname;
+
+    prepare_coordeval(fp, ObjPs, ObjPs_normal, fpname);
+
+    return coord_eval(fp, ObjPs, ObjPs_normal, fpname);
 }
 
-double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm)
+double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh, dhArmature* arm)
 {
-    return collision_eval(mesh1,mesh2,arm);
+    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
+    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
+    extract_contactPoints(ssd, objMesh, bodyPoints, objectPoints);
+
+    double eval = collision_eval(arm, bodyPoints, objectPoints);
+    dhdelete(bodyPoints);
+    dhdelete(objectPoints);
+
+    return eval;
+}
+
+double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
+                                         dhMesh* bodyMesh, dhMesh* objMesh, int age)
+{
+    vector<vector<QString>> MP;
+    vector<vector<QString>> color_def;
+    vector<vector<QString>> area_to_bone;
+    double coef;
+    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
+    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
+
+    prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
+    extract_contactPoints(bodySSD, objMesh, bodyPoints, objectPoints);
+
+    double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, MP, color_def, area_to_bone, bodyPoints, coef);
+    dhdelete(bodyPoints);
+    dhdelete(objectPoints);
+
+    return eval;
 }
 
 void dhArmOpe::FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
@@ -334,6 +368,7 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         IDHElement* e=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
         if(isOK){
             dhArmature* arm = dynamic_cast<dhArmature*>(e);
+
             int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
                                              tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
 
@@ -412,12 +447,7 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
 
     else if(cmd == "Force Closure")
     {
-        vector<vector<QString>> MP;
-        vector<vector<QString>> color_def;
-        vector<vector<QString>> area_to_bone;
-        prepare_forceClosure(MP, color_def, area_to_bone);
-
-        bool isOK,isOK2,isOK3,isOK4;
+        bool isOK,isOK2,isOK3,isOK4, ok;
 
         IDHElement* e1 = dhApp::elementSelectionDialog(dhArmature::type,&isOK);
         if(isOK){
@@ -435,7 +465,12 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
                     if(isOK4){
                         dhMesh* objMesh = dynamic_cast<dhMesh*>(e4);
 
-                        forceClosure_eval(arm, ssd, bodyMesh, objMesh, MP, color_def, area_to_bone);
+                        int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
+                                                         tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+
+                        if(ok){
+                            double fceval = this->ForceClosure_evaluation(arm, ssd, bodyMesh, objMesh, age);
+                        }
                     }
                 }
             }
