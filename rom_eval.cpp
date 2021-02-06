@@ -30,9 +30,10 @@ double cal_res(int age){
 
 void restrict_ROM(vector<vector<QString>> &DF, double rst){     //一次元ROMの制限
     for(size_t t=0; t<DF.size(); t++){
-        double tmp1,tmp2;
-        tmp1 = DF[t][1].toDouble()*rst;
-        tmp2 = DF[t][2].toDouble()*rst;
+        double ave,tmp1,tmp2;
+        ave = (DF[t][1].toDouble() + DF[t][2].toDouble())/2;
+        tmp1 = ave + (DF[t][1].toDouble() - ave) * rst;
+        tmp2 = ave + (DF[t][2].toDouble() - ave) * rst;
         DF[t][1] = QString::number(tmp1);
         DF[t][2] = QString::number(tmp2);
     }
@@ -174,7 +175,7 @@ vector<alphashape> restrict_ashape(vector<alphashape>& ashape_all, double rst)  
         OrgROM->fill_image(0);      //中身を塗りつぶす
         ResROM->fill_image(0);
 
-////　確認するために，画像ファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
+//　確認するために，画像ファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
 //        PGM* OverWrap = new PGM(255,WIDTH,HEIGHT);
 //        for(int row=0; row<OverWrap->width; row++){
 //            for(int col=0; col<OverWrap->height; col++){
@@ -188,7 +189,7 @@ vector<alphashape> restrict_ashape(vector<alphashape>& ashape_all, double rst)  
 //        QString path_pgm = head+middle+tail;
 //        OverWrap->save_image(path_pgm.toStdString());
 //        delete OverWrap;
-////ここまで
+//ここまで
 
         PGM *ANDROM = new PGM(255,WIDTH,HEIGHT);
 
@@ -208,7 +209,7 @@ vector<alphashape> restrict_ashape(vector<alphashape>& ashape_all, double rst)  
         pgm_to_csv(edge, csvize, minx, miny, maxx, maxy, split_csv);
 
 
-////　確認するために，csvファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
+//　確認するために，csvファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
 //        QString top = "C:\\kenkyu\\GraspYA\\ashape_rst\\csv\\";
 //        QString bottom = ashape_all[t].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\");
 
@@ -222,7 +223,7 @@ vector<alphashape> restrict_ashape(vector<alphashape>& ashape_all, double rst)  
 //        for(size_t jj=0; jj<ashape_all[t].vertices.size(); jj++){   //元ROM
 //            ofs << std::to_string(ashape_all[t].vertices[jj].x) << ',' << std::to_string(ashape_all[t].vertices[jj].y) << std::endl;
 //        }
-////ここまで
+//ここまで
 
 
         alphashape tmp;
@@ -276,7 +277,7 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 // assembledActiveDF01_maxmin.csvの読み込み
 // =======================================
 
-    QString add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";
+    QString add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_health_maxmin.csv";
 
     Csv objDF(add);
     if(!objDF.getCsv(DF)){
@@ -374,14 +375,14 @@ double calc_distance(vector<Vector2D> xy, Vector2D pos_pos){
 
 
 void in_or_out(vector<Vector2D> xy, Vector2D pos_pos,int& inside_num,int& in_out){
-	for(int l1=0; l1<xy.size()-2; l1++){
+    for(int l1=0; l1<=xy.size()-2; l1++){
 		int l2 = l1 + 1;
 
         Vector2D position_edge1 = xy[l1];
         Vector2D position_edge2 = xy[l2];
 
 //============================
-//Crossing Number Algorithm
+// Crossing Number Algorithm
 //============================
 
 		if(position_edge1.x != position_edge2.x){
@@ -503,7 +504,7 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
 
         Vector2D position_pos(rot1,rot2);   //joints_listによって定められた関節の組み合わせに応じて
                                             //現在の関節角度組み合わせを定義する．
-
+//        DH_LOG(QString::number(rot1)+","+QString::number(rot2),0);
 
         vector<Vector2D> ashape;    //ashapeを構成する頂点データ
         for(int a=0; a<ashape_all.size(); a++){
@@ -512,6 +513,10 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
                 ashape = ashape_all[a].vertices;
             }
         }
+//        for(int i=0 ;i<ashape.size();i++){
+//            DH_LOG(QString::number(ashape[i][0])+","+QString::number(ashape[i][1]),0);
+//        }
+
 
         double min_pos_to_edge_length;
 
@@ -524,6 +529,7 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
 
 		if(in_out != 0 && inside_num % 2 == 0){
 			in_out = 0;
+//            DH_LOG("Outside ROM",0);
 		}
 
         double min_length;
@@ -539,10 +545,12 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
 				min_length = 0;
 			}
 		}
-//        DH_LOG(QString::number(i)+":"+QString::number(min_length),0);
+//        DH_LOG(joints_list[i][0]+","+joints_list[i][1]+":"+QString::number(min_length),0);
+//        DH_LOG("   ",0);
 
 		min_length_sum += min_length * min_length;
 	}
+
 
 #pragma omp for default(private) reduction(+:min_length_sum)
     for(int col=0; col<joint_bone.size(); col++){
@@ -584,11 +592,12 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
                 min_length = 0.0;
             }
         }
+//        DH_LOG(joint_bone[col][0]+":"+QString::number(min_length),0);
 
 		min_length_sum += min_length * min_length;
 	} 
 
-    double Rom_eval = min_length_sum/(30+25);
+    double Rom_eval = min_length_sum/(joints_list.size() + joint_bone.size());
 
     return Rom_eval;
 }

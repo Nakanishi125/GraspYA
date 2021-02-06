@@ -15,11 +15,16 @@
 #include "dhSkeletalSubspaceDeformation.h"
 #include "dhcontact.h"
 
-void extract_contactPoints(dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh,
+
+void prepare_colleval(dhArmature* arm, double &size, dhPointCloud* internal, dhMesh* objMesh);
+
+void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh);
+
+void extract_contactPoints(dhSkeletalSubspaceDeformation* ssd, dhPointCloud* pts,
                            dhPointCloudAsVertexRef* &bodyPoints, dhPointCloudAsVertexRef* &objectPoints);
 
 double collision_eval(dhArmature* arm, dhPointCloudAsVertexRef* &bodyPoints,
-                      dhPointCloudAsVertexRef* &objectPoints);
+                      dhPointCloudAsVertexRef* &objectPoints, double hand_size);
 
 double hand_length(dhArmature* arm);
 

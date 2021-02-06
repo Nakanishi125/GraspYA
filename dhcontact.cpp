@@ -12,13 +12,14 @@
 #include "dhSpatialSearching.h"
 #include "csv.hpp"
 
-
 //「mesh1を構成する点群」と「mesh2を構成する点群」が重なる領域内の点群を各々抽出する関数
 void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,dhPointCloudAsVertexRef*& contactPoints2,
-                          dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2,double tolIn,double tolOut){
+                          dhSkeletalSubspaceDeformation* mesh1, dhPointCloud* pts,
+                          double tolIn, double tolOut){
 
     dhCollisionDetection::Desc cdesc;
-    cdesc.pc[0] = mesh1;  cdesc.pc[1] = mesh2;
+    cdesc.pc[0] = mesh1;  cdesc.pc[1] = pts;
+
 
     //あらかじめPointCloudを入れる変数を用意し，これを上書きしてもらう形をとる
     cdesc.pcCol[0] = contactPoints1;  cdesc.pcCol[1] = contactPoints2;
@@ -38,6 +39,37 @@ void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,dhPointCloudA
     dhApp::updateAllWindows();
 
 }
+
+
+
+
+////「mesh1を構成する点群」と「mesh2を構成する点群」が重なる領域内の点群を各々抽出する関数        // 一応残しておく
+//void computeContactRegion(dhPointCloudAsVertexRef*& contactPoints1,dhPointCloudAsVertexRef*& contactPoints2,
+//                          dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2,
+//                          double tolIn, double tolOut){
+
+//    dhCollisionDetection::Desc cdesc;
+//    cdesc.pc[0] = mesh1;  cdesc.pc[1] = mesh2;
+
+
+//    //あらかじめPointCloudを入れる変数を用意し，これを上書きしてもらう形をとる
+//    cdesc.pcCol[0] = contactPoints1;  cdesc.pcCol[1] = contactPoints2;
+
+//    cdesc.createContactPointCloud[0] = false;   //dhCollisionDetection内でPointCloudを作るかどうか(True or False)
+//    cdesc.createContactPointCloud[1] = false;   //Trueは作る，Falseは作らない
+//    cdesc.tolIn = tolIn;    cdesc.tolOut = tolOut;
+
+//    dhCollisionDetection* collision;
+//    collision = dhnew<dhCollisionDetection>();
+
+//    collision->initialize(cdesc);
+//    collision->doCollisionDetection();
+
+//    dhdelete(collision);
+
+//    dhApp::updateAllWindows();
+
+//}
 
 
 void getArmatureStructure(dhArmature* arm, dhBone* link,
@@ -89,7 +121,7 @@ double getDistance(dhVec3 point,dhVec3 orig,dhVec3 tail){
 
 //点群objectPointsの所属骨を導出し，segment型のメンバに適切な値を入力していく関数
 //ここでのsegmは，骨に所属する．
-void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints,segment* segm,dhArmature* arm,
+void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints, segment* segm, dhArmature* arm,
                          vector<QString> &bones){
 
     vector<dhVec3> points;
@@ -177,19 +209,38 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
 
         dhVec3 point_color(bodyMesh->Vi(PointID)->color(0),         //頂点が接触しているbodyMeshの色を抽出する
                            bodyMesh->Vi(PointID)->color(1),
-                           bodyMesh->Vi(PointID)->color(2));
+                           bodyMesh->Vi(PointID)->color(2));        
 
         int flag = 0;
         for(int area=0; area<color_def.size(); area++){
-            if(segm[area].BodyColor[0] == (int)(255*point_color[0]) &&
-               segm[area].BodyColor[1] == (int)(255*point_color[1]) &&
-               segm[area].BodyColor[2] == (int)(255*point_color[2]) )
+//            DH_LOG("Pointcolor:"+QString::number((int)(255*point_color[0]))+","+QString::number((int)(255*point_color[1]))+","+QString::number((int)(255*point_color[2])),0);
+//            DH_LOG("Bodycolor:"+QString::number(segm[area].BodyColor[0])+","+QString::number(segm[area].BodyColor[1])+","+QString::number(segm[area].BodyColor[2]),0);
+
+//            if( (((int)(255*point_color[0])-5 < segm[area].BodyColor[0]) &&
+//                 (segm[area].BodyColor[0]<(int)(255*point_color[0])+5))
+//                    &&
+//                (((int)(255*point_color[1])-5 < segm[area].BodyColor[1]) &&
+//                 (segm[area].BodyColor[1]<(int)(255*point_color[1])+5))
+//                    &&
+//                (((int)(255*point_color[2])-5 < segm[area].BodyColor[2]) &&
+//                                 (segm[area].BodyColor[2]<(int)(255*point_color[2])+5)) )
+
+            if((segm[area].BodyColor[0] == (int)(255*point_color[0])) &&
+               (segm[area].BodyColor[1] == (int)(255*point_color[1])) &&
+               (segm[area].BodyColor[2] == (int)(255*point_color[2])) )
             {
                 segm[area].BodyPointsID.push_back(PointID);
                 flag = 1;
+                break;
             }
         }
-        if(flag == 0)   DH_LOG("The color is not defined.",0);
+        if(flag == 0){
+            DH_LOG("The color is not defined.",0);
+//            for(int area=0; area<color_def.size(); area++){   //ハンドモデルに存在しないRGB(150,150,255)が混ざっている．
+//                DH_LOG("Pointcolor:"+QString::number((int)(255*point_color[0]))+","+QString::number((int)(255*point_color[1]))+","+QString::number((int)(255*point_color[2])),0);
+//                DH_LOG("Bodycolor:"+QString::number(segm[area].BodyColor[0])+","+QString::number(segm[area].BodyColor[1])+","+QString::number(segm[area].BodyColor[2]),0);
+//            }
+        }
     }
 
     for(int area=0; area<color_def.size(); area++)

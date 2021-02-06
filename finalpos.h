@@ -4,6 +4,7 @@
 #include "dhMath.h"
 #include "dhArmature.h"
 #include "dhFeaturePoint.h"
+#include "dhPointCloud.h"
 #include "csv.hpp"
 #include "Vector2D.hpp"
 #include "dhBone.h"
@@ -32,9 +33,9 @@
 const double pi = 3.14159265;
 const double e = 2.718281828;
 
-const int number_of_particles = 500;
+const int number_of_particles = 50;
 const int dimensions = 33;
-const int repeat_times = 50;
+const int repeat_times = 70;
 
 typedef array<array<double,dimensions>,number_of_particles> particles;
 
@@ -82,6 +83,8 @@ struct Parameter{
     //Collision_eval関連
     dhPointCloudAsVertexRef* bodyPoints;
     dhPointCloudAsVertexRef* objectPoints;
+    dhPointCloud* internal;
+    double hand_size;
     //ForceClosure関連
     vector<vector<QString>> MP;
     vector<vector<QString>> color_def;

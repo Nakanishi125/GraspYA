@@ -89,7 +89,7 @@ void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& 
     const double MIN_RATE = 0.15/0.55;
 
     if(age<80){
-        coef = (MAX_RATE-MIN_RATE)*(age-MIN_AGE)/(MAX_AGE-MIN_AGE) + MAX_RATE;
+        coef = (MIN_RATE-MAX_RATE)*(age-MIN_AGE)/(MAX_AGE-MIN_AGE) + MAX_RATE;
     }
     else{
         coef = MIN_RATE;
@@ -117,7 +117,7 @@ void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& 
 
 }
 
-dhMat44 RotateAroundAxis(dhVec3 axis, double theta)
+dhMat44 RotateAroundAxis(dhVec3 axis, double theta)     //ロドリゲスの公式
 {
     vector<vector<double>> mat;
     vector<double> row;
@@ -182,14 +182,14 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
 
     for(int area=0; area<contact_areas.size(); area++){
 
-        dhVec3 fricConeHeight = segm[contact_areas[area]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
-        fricConeHeight.normalize();
+        dhVec3 fricCone_y = segm[contact_areas[area]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
+        fricCone_y.normalize();
 
-        dhVec3 fricCone_x(1, 0, -fricConeHeight[0]/fricConeHeight[2]);      //y方向を0とする．
+        dhVec3 fricCone_x(1, 0, -fricCone_y[0]/fricCone_y[2]);      //y方向を0とする．
         fricCone_x.normalize();
 
         double zz = -1/(fricCone_x[2]);
-        double yy = -fricConeHeight[0]/fricConeHeight[1] - zz*fricConeHeight[2]/fricConeHeight[1];
+        double yy = -fricCone_y[0]/fricCone_y[1] - zz*fricCone_y[2]/fricCone_y[1];
 
         dhVec3 fricCone_z(1, yy, zz);
         fricCone_z.normalize();
@@ -203,10 +203,10 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
         dhMat33 z3 = RotateAroundAxis(fricCone_x, theta+M_PI/2).toMat33();
         dhMat33 z4 = RotateAroundAxis(fricCone_x,-(theta+M_PI/2)).toMat33();
 
-        dhVec3 n1 = z1*fricConeHeight;
-        dhVec3 n2 = z2*fricConeHeight;
-        dhVec3 n3 = z3*fricConeHeight;
-        dhVec3 n4 = z4*fricConeHeight;
+        dhVec3 n1 = z1*fricCone_y;
+        dhVec3 n2 = z2*fricCone_y;
+        dhVec3 n3 = z3*fricCone_y;
+        dhVec3 n4 = z4*fricCone_y;
 
         FrictionMatrix[4*area][3*area]     = n1[0];
         FrictionMatrix[4*area][3*area+1]   = n1[1];
@@ -275,9 +275,9 @@ vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_are
         ry = segm[contact_areas[i]].ObjectCoG[1] - object_center[1];
         rz = segm[contact_areas[i]].ObjectCoG[2] - object_center[2];
 
-        GraspMatrix[3][3*i+1] = rz;     GraspMatrix[3][3*i+2] = -ry;
-        GraspMatrix[4][3*i] = -rz;      GraspMatrix[4][3*i+2] = rx;
-        GraspMatrix[5][3*i] = ry;       GraspMatrix[5][3*i+1] = -rx;
+        GraspMatrix[3][3*i+1] = -rz;     GraspMatrix[3][3*i+2] = ry;
+        GraspMatrix[4][3*i] = rz;      GraspMatrix[4][3*i+2] = -rx;
+        GraspMatrix[5][3*i] = -ry;       GraspMatrix[5][3*i+1] = rx;
     }
 //    for(int i=0; i<GraspMatrix.size(); i++){      // G　確認用
 //        for(int j=0; j<GraspMatrix[0].size(); j++){
@@ -289,15 +289,22 @@ vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_are
 }
 
 
-vector<double> GetBoundMatrix(dhArmature* arm, vector<QString> contact_bones)
+vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas)
 {
     vector<double> eT;
-    for(int i=0; i<contact_bones.size(); i++){
-        dhVec3 depth_vec = arm->bone(contact_bones[i])->Twj.toMat33().column(1);
-        double norm = depth_vec[0] + depth_vec[1] + depth_vec[2];
-        eT.push_back(depth_vec[0]/norm);
-        eT.push_back(depth_vec[1]/norm);
-        eT.push_back(depth_vec[2]/norm);
+    for(int i=0; i<contact_areas.size(); i++){
+        dhVec3 depth_vec = segm[contact_areas[i]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
+
+        double absx, absy, absz;
+        absx = (depth_vec[0] > 0) ? depth_vec[0] : -depth_vec[0];
+        absy = (depth_vec[1] > 0) ? depth_vec[1] : -depth_vec[1];
+        absz = (depth_vec[2] > 0) ? depth_vec[2] : -depth_vec[2];
+
+        double elesum = absx + absy + absz;
+
+        eT.push_back(depth_vec[0]/elesum);
+        eT.push_back(depth_vec[1]/elesum);
+        eT.push_back(depth_vec[2]/elesum);
     }
 
     return eT;
@@ -455,6 +462,7 @@ void Adapt_to_glpk2(vector<double> mg, vector<vector<double>> G, vector<vector<d
 {
     //条件式の左辺行列の生成
     //等式部分
+
     for(size_t i=0; i<G.size(); i++){       //1行目
         vector<double> row;
         for(size_t j=0; j<G[0].size(); j++){
@@ -492,6 +500,7 @@ void Adapt_to_glpk2(vector<double> mg, vector<vector<double>> G, vector<vector<d
         left.push_back(row);
     }
 
+
     vector<double> row;     //2行目
     for(size_t j=0; j<F[0].size(); j++){
         row.push_back(0.0);
@@ -501,6 +510,7 @@ void Adapt_to_glpk2(vector<double> mg, vector<vector<double>> G, vector<vector<d
         row.push_back(0.0);
     }
     left.push_back(row);
+
 
     for(size_t i=0; i<MP[0].size()-2; i++){     //3行目
         vector<double> row;
@@ -572,7 +582,6 @@ void Adapt_to_glpk2(vector<double> mg, vector<vector<double>> G, vector<vector<d
         coef.push_back(0.0);
     }
 
-
 }
 
 
@@ -581,9 +590,14 @@ double GLPK_solve_LP1(vector<vector<double>> left, vector<double> right, vector<
                   vector<double> coef)
 {
     double z;
-    vector<double> x;
-    int ia[1000], ja[1000];
-    double ar[1000];
+
+    int *ia, *ja;
+    double *ar;
+
+    ia = (int*)malloc(sizeof(int)*(left.size()*left[0].size()+1));
+    ja = (int*)malloc(sizeof(int)*(left.size()*left[0].size()+1));
+    ar = (double*)malloc(sizeof(double)*(left.size()*left[0].size()+1));
+
     glp_prob* lp;
     lp = glp_create_prob();
     glp_set_prob_name(lp, "LP1");
@@ -615,11 +629,16 @@ double GLPK_solve_LP1(vector<vector<double>> left, vector<double> right, vector<
     glp_load_matrix(lp, cnt, ia, ja, ar);
     glp_simplex(lp, NULL);
     z = glp_get_obj_val(lp);
+
 //    DH_LOG("LP1 value is "+QString::number(z),0);
 //    for(size_t j=1; j<=left[0].size(); j++){
 //        x.push_back(glp_get_col_prim(lp,j));
 //        DH_LOG(QString::number(glp_get_col_prim(lp, j)),0);
 //    }
+
+    free(ia);
+    free(ja);
+    free(ar);
 
     return z;
 
@@ -629,9 +648,13 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
                       vector<vector<double>> G, vector<vector<double>> J)
 {
     double z;
-    vector<double> x;
-    int ia[1000], ja[1000];
-    double ar[1000];
+
+    int *ia, *ja;
+    double *ar;
+    ia = (int*)malloc(sizeof(int)*(left.size()*left[0].size()+1));
+    ja = (int*)malloc(sizeof(int)*(left.size()*left[0].size()+1));
+    ar = (double*)malloc(sizeof(double)*(left.size()*left[0].size()+1));
+
     glp_prob* lp;
     lp = glp_create_prob();
     glp_set_prob_name(lp, "LP2");
@@ -645,11 +668,13 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
             glp_set_row_bnds(lp, i, GLP_UP, 0, right[i-1]);
         }
     }
+
     glp_add_cols(lp, coef.size());
     for(size_t j=1; j<=coef.size(); j++){
         glp_set_col_bnds(lp, j, GLP_FR, 0, 0);
         glp_set_obj_coef(lp, j, coef[j-1]);
     }
+
     int cnt=0;
     for(size_t i=1; i<=left.size(); i++){
         for(size_t j=1; j<=left[0].size(); j++){
@@ -660,17 +685,32 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
         }
     }
 
+
     glp_load_matrix(lp, cnt, ia, ja, ar);
     glp_simplex(lp, NULL);
     z = glp_get_obj_val(lp);
+
+//    log << "left:(";  log << left.size();  log << ",";  log << left[0].size();  log << ")" << endl;
+//    log << "right:";  log << right.size() << endl;
+
+//    log << "LP2: "; log << z <<endl;
+//    for(size_t j=1; j<=left[0].size(); j++){
+//        log << "f"; log << j; log << ":"; log << glp_get_col_prim(lp, j); log << "  ";
+//        if(j%5 == 4)    log << endl;
+//    }
+//    log << endl << endl;
+
 //    DH_LOG("LP2 value is "+QString::number(z),0);
-//    for(size_t j=1; j<=G[0].size(); j++){
+//    for(size_t j=1; j<=left[0].size(); j++){
 //        x.push_back(glp_get_col_prim(lp,j));
 //        DH_LOG("f"+QString::number(j)+":"+QString::number(glp_get_col_prim(lp, j)),0);
 //    }
 
-    return z;
+    free(ia);
+    free(ja);
+    free(ar);
 
+    return z;
 }
 
 
@@ -682,7 +722,12 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
                          double coef)
 {
     double FCeval;
-    double fric_coef_young = 1.0;
+    const double fric_coef_young = 0.5;
+    const double obj_mass = 200;      //[g]
+    const double gravity = 9.81;      //[m/s^2]
+//    dhVec3 object_center(40, 40, 75);       //後でAPIから関数探す
+    dhVec3 object_center(50, 25, 3.5);
+
 
     map<QString, int> bone_index;
     bone_index["ROOT"] = 0;     bone_index["CP"] = 1;       bone_index["TMCP"] = 2;
@@ -695,15 +740,13 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 
     double friction_coefficient = fric_coef_young*coef;
 
-    vector<double> mg = {0,-4.26,0};
+    vector<double> mg = {-obj_mass*gravity/1000, 0, 0};
 
     vector<vector<int>> DoFs = { {}, {}, {0,2}, {0,2}, {0}, {}, {0,2}, {0}, {0}, {}, {0,2}, {0},{0},
                                  {}, {0,2}, {0}, {0}, {}, {0,2}, {0}, {0}};
 
-    dhVec3 object_center(15, 15, 75);       //後でAPIから関数探す
 
-
-                                                        //グローバル座標系
+    //グローバル座標系
     vector<int> areas;      //　↓areas定義
     for(size_t i=0; i<color_def.size(); i++)    areas.push_back(color_def[i][0].toInt());
 
@@ -731,7 +774,7 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 
     if(contact_bones.size() == 0){
         DH_LOG("Force Closure does not exist.",0);
-        return 0.0;
+        return 1.0;
     }
 
     dhBone* link;
@@ -748,14 +791,12 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 //        DH_LOG(JacobianBones[i],0);
 //    }
 
-
     vector<vector<double>> GraspMatrix = ComputeGraspMatrix(segm, areas, object_center);
     vector<vector<double>> FrictionMatrix = ComputeFrictionMatrix(segm, areas, friction_coefficient);
-    vector<double> eT = GetBoundMatrix(arm, contact_bones);
+    vector<double> eT = GetBoundMatrix(segm, areas);
     vector<vector<double>> ContactJacobian = ComputeContactJacobian(arm, bone_index, JacobianBones, DoFs,
                                                   contact_bones, areas, segm);
     vector<vector<double>> MomentArmForce = GetMomentArm_Force(MP, JacobianBones, DoFs, bone_index);
-
 
     vector<vector<double>> left_lp1, left_lp2;
     vector<double> right_lp1, right_lp2;
@@ -767,9 +808,10 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 //    DH_LOG("MuscleNumber is:"+QString::number(MP.size())+","+QString::number(MP[0].size()-2),0);
 
     Adapt_to_glpk1(GraspMatrix, FrictionMatrix, eT, left_lp1, right_lp1, coef_lp1);
+
+
     Adapt_to_glpk2(mg, GraspMatrix, ContactJacobian, MP, MomentArmForce, FrictionMatrix,
                    left_lp2, right_lp2, coef_lp2);
-
 
 
 //    DH_LOG("LP2_left is:"+QString::number(left_lp2.size())+","+QString::number(left_lp2[0].size()),0);
@@ -779,22 +821,21 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 
     double fc_lp1, fc_lp2;
     fc_lp1 = GLPK_solve_LP1(left_lp1,right_lp1,GraspMatrix,coef_lp1);
+
     if(fc_lp1 == 0){
-//        DH_LOG("Form Closure does not exist.",0);
+        DH_LOG("Force Closure does not exist.",0);
         FCeval = 1.0;
     }
     else{
         fc_lp2 = GLPK_solve_LP2(left_lp2, right_lp2, coef_lp2, GraspMatrix, ContactJacobian);
         if(fc_lp2 >= 0.2){
-//            DH_LOG("Force Closure exist.",0);
             FCeval = 0.0;
         }
         else if(fc_lp2 < 0.2){
-//            DH_LOG("Force Closure exist.",0);
             FCeval = 1.0 - 25*fc_lp2*fc_lp2;
         }
     }
-    DH_LOG("Evaluate-value is "+QString::number(fc_lp2)+"->"+QString::number(FCeval),0);
+//    DH_LOG("Force Closure eval is "+QString::number(fc_lp2),0);
 
     return FCeval;
 }

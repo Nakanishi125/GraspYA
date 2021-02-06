@@ -245,11 +245,16 @@ double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh
 {
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
-    extract_contactPoints(ssd, objMesh, bodyPoints, objectPoints);
+    dhPointCloud* internal = dhnew<dhPointCloud>();
+    double hand_size;
 
-    double eval = collision_eval(arm, bodyPoints, objectPoints);
+    prepare_colleval(arm, hand_size, internal, objMesh);
+    extract_contactPoints(ssd, internal, bodyPoints, objectPoints);
+
+    double eval = collision_eval(arm, bodyPoints, objectPoints, hand_size);
     dhdelete(bodyPoints);
     dhdelete(objectPoints);
+    dhdelete(internal);
 
     return eval;
 }
@@ -263,13 +268,16 @@ double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDefo
     double coef;
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
+    dhPointCloud* internal = dhnew<dhPointCloud>();
 
+    generate_points_inobject(internal, objMesh);
     prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
-    extract_contactPoints(bodySSD, objMesh, bodyPoints, objectPoints);
+    extract_contactPoints(bodySSD, internal, bodyPoints, objectPoints);
 
     double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, MP, color_def, area_to_bone, bodyPoints, coef);
     dhdelete(bodyPoints);
     dhdelete(objectPoints);
+    dhdelete(internal);
 
     return eval;
 }
