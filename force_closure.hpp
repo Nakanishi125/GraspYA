@@ -6,7 +6,7 @@
 #include"dhSkeletalSubspaceDeformation.h"
 
 
-void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& color_def,
+void prepare_forceClosure(vector<vector<QString>>& MP,  vector<vector<QString>>& color_def,
                           vector<vector<QString>>& area_to_bone, double& coef, int age);
 
 dhMat44 RotateAroundAxis(dhVec3 axis, double theta);
@@ -14,7 +14,8 @@ dhMat44 RotateAroundAxis(dhVec3 axis, double theta);
 void GetJacobianBones(dhArmature* arm, vector<QString> bones, vector<QString> contact_bones,
                       vector<QString>& JacobianBones);
 
-vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_areas, double friction_coefficient);
+vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_areas, double friction_coefficient,
+                                             vector<vector<QString>> ObjPs_normal);
 
 vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas, dhVec3 object_center);
 
@@ -40,10 +41,10 @@ double GLPK_solve_LP1(vector<vector<double>> left, vector<double> right, vector<
                   vector<double> coef);
 
 double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<double> coef,
-                      vector<vector<double>> G, vector<vector<double>> J);
+                      vector<vector<double>> G, vector<vector<double>> J,vector<vector<double>> MF);
 
 double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
-                         dhMesh* bodyMesh, dhMesh* objMesh,
+                         dhMesh* bodyMesh, dhMesh* objMesh, vector<vector<QString>> ObjPs_normal,
                          vector<vector<QString>> MP, vector<vector<QString>> color_def,
                          vector<vector<QString>> area_to_bone, dhPointCloudAsVertexRef* &bodyPoints,
                          double coef);

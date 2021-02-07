@@ -28,9 +28,9 @@ void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal
 void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh)
 {
 
-    const int OBJ_X = 100;
-    const int OBJ_Y = 50;
-    const int OBJ_Z = 70;
+    const int OBJ_X = 30;
+    const int OBJ_Y = 30;
+    const int OBJ_Z = 150;
 
     const int Number_of_Pts = 5000;
 

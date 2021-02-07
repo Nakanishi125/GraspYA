@@ -252,7 +252,7 @@ double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh
     extract_contactPoints(ssd, internal, bodyPoints, objectPoints);
 
     double eval = collision_eval(arm, bodyPoints, objectPoints, hand_size);
-    dhdelete(bodyPoints);
+//    dhdelete(bodyPoints);
     dhdelete(objectPoints);
     dhdelete(internal);
 
@@ -262,19 +262,33 @@ double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh
 double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
                                          dhMesh* bodyMesh, dhMesh* objMesh, int age)
 {
+    vector<vector<QString>> ObjPs_normal;
     vector<vector<QString>> MP;
     vector<vector<QString>> color_def;
     vector<vector<QString>> area_to_bone;
+
     double coef;
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloud* internal = dhnew<dhPointCloud>();
 
+//==============================
+//ObjectNormalvecs3.csvの読み込み
+//==============================
+    QString list_normal = "C:\\kenkyu\\GraspYA\\data\\ObjectNormalvecs3.csv";
+
+    Csv Obj_normal(list_normal);
+    if(!Obj_normal.getCsv(ObjPs_normal)){
+        cout << "cannot read" << endl;
+        return 0;
+    }
+
+    ObjPs_normal.erase(ObjPs_normal.begin());
     generate_points_inobject(internal, objMesh);
     prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
     extract_contactPoints(bodySSD, internal, bodyPoints, objectPoints);
 
-    double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, MP, color_def, area_to_bone, bodyPoints, coef);
+    double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, ObjPs_normal, MP, color_def, area_to_bone, bodyPoints, coef);
     dhdelete(bodyPoints);
     dhdelete(objectPoints);
     dhdelete(internal);
