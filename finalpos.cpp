@@ -261,7 +261,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
 
 //func_estimateのパラメータ(各評価関数の全変数)
 
-    Parameter p = { 200, 1.5, 50000, 300, arm, Fp, ssd, handMesh, objMesh,
+    Parameter p = { 200, 1.5, 30000, 500, arm, Fp, ssd, handMesh, objMesh,
                     joints_list, joint_bone, DF, ashape_all,               //ROM
                     ObjPs, ObjPs_normal, fpname,                           //Coordinate
                     bodyPoints, objectPoints, internal, hand_size,         //Collision
@@ -294,7 +294,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
         if(status)  break;
 
         size = gsl_multimin_fminimizer_size(s);
-        status = gsl_multimin_test_size(size,1);        //重心と各頂点の平均距離が1以内
+        status = gsl_multimin_test_size(size,0.5);        //重心と各頂点の平均距離が1以内
 
         if(status == GSL_SUCCESS){
             DH_LOG("iter is "+QString::number(iter),0);

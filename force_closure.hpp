@@ -15,16 +15,17 @@ void GetJacobianBones(dhArmature* arm, vector<QString> bones, vector<QString> co
                       vector<QString>& JacobianBones);
 
 vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_areas, double friction_coefficient,
-                                             vector<vector<QString>> ObjPs_normal);
+                                             vector<vector<QString>> ObjPs_normal, vector<int> force_areas);
 
-vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas, dhVec3 object_center);
+vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas,
+                                          dhVec3 object_center, vector<int> force_areas);
 
-vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas);
+vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas, vector<vector<QString>> ObjPs_normal);
 
 vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int> bone_index ,
                                               vector<QString> JacobianBones, vector<vector<int>> DoFs,
                                               vector<QString> contact_bones, vector<int> contact_areas,
-                                              segment* segm);
+                                              vector<int> force_areas, segment* segm, map<int,QString> atb);
 
 
 vector<vector<double>> GetMomentArm_Force(vector<vector<QString>> MP, vector<QString> JacobianBones,

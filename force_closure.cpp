@@ -162,6 +162,7 @@ void GetJacobianBones(dhArmature* arm, vector<QString> bones, vector<QString> co
             vector<QString> tmpbones;
             vector<int> tmpdepths;
             getArmatureStructure(arm, tmplink, tmpbones, tmpdepths, bones[i]);
+            dhdelete(tmplink);
             for(size_t k=0; k<tmpbones.size(); k++){
                 if(contact_bones[j] == tmpbones[k]){
                     JacobianBones.push_back(bones[i]);
@@ -177,7 +178,7 @@ void GetJacobianBones(dhArmature* arm, vector<QString> bones, vector<QString> co
 
 
 vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_areas, double friction_coefficient,
-                                             vector<vector<QString>> ObjPs_normal)
+                                             vector<vector<QString>> ObjPs_normal, vector<int> force_areas)
 {
     QList<int> thumb = {0, 1, 16, 33};
     QList<int> index = {2, 3, 4, 17, 28, 29, 30, 31, 32};
@@ -186,43 +187,43 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
     QList<int> pinky = {11, 12, 19, 20, 21};
 
 
-    vector<vector<double>> FrictionMatrix(4*contact_areas.size(),vector<double>(3*contact_areas.size()));
+    vector<vector<double>> FrictionMatrix(4*force_areas.size(),vector<double>(3*force_areas.size()));
     double theta = atan(friction_coefficient);
 
     string fn = "C:\\Users\\ynunakanishi\\Desktop\\log6.txt";
     ofstream log(fn, ios::app);
 
-    for(int area=0; area<contact_areas.size(); area++){
+    for(int area=0; area<force_areas.size(); area++){
 
-        dhVec3 fricCone_y = segm[contact_areas[area]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
+        dhVec3 fricCone_y = segm[force_areas[area]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
         fricCone_y.normalize();                                            //指の法線はめり込むと逆向き法線になり得る
 
         dhVec3 obj_Normal;
-        if(thumb.contains(contact_areas[area]))
+        if(thumb.contains(force_areas[area]))
         {
             obj_Normal[0] = ObjPs_normal[0][1].toDouble();
             obj_Normal[1] = ObjPs_normal[0][2].toDouble();
             obj_Normal[2] = ObjPs_normal[0][3].toDouble();
         }
-        else if(index.contains(contact_areas[area]))
+        else if(index.contains(force_areas[area]))
         {
             obj_Normal[0] = ObjPs_normal[1][1].toDouble();
             obj_Normal[1] = ObjPs_normal[1][2].toDouble();
             obj_Normal[2] = ObjPs_normal[1][3].toDouble();
         }
-        else if(middle.contains(contact_areas[area]))
+        else if(middle.contains(force_areas[area]))
         {
             obj_Normal[0] = ObjPs_normal[2][1].toDouble();
             obj_Normal[1] = ObjPs_normal[2][2].toDouble();
             obj_Normal[2] = ObjPs_normal[2][3].toDouble();
         }
-        else if(ring.contains(contact_areas[area]))
+        else if(ring.contains(force_areas[area]))
         {
             obj_Normal[0] = ObjPs_normal[3][1].toDouble();
             obj_Normal[1] = ObjPs_normal[3][2].toDouble();
             obj_Normal[2] = ObjPs_normal[3][3].toDouble();
         }
-        else if(pinky.contains(contact_areas[area]))
+        else if(pinky.contains(force_areas[area]))
         {
             obj_Normal[0] = ObjPs_normal[4][1].toDouble();
             obj_Normal[1] = ObjPs_normal[4][2].toDouble();
@@ -230,12 +231,13 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
         }
         else{
             DH_LOG("not belong to any fingers",0);
-
+            DH_LOG(QString::number(force_areas[area]),0);
+            obj_Normal = segm[force_areas[area]].ObjectNormal;
         }
 
         obj_Normal.normalize();
 
-        log << contact_areas[area] << endl;
+        log << force_areas[area] << endl;
         log << obj_Normal[0];   log << "," ; log << obj_Normal[1];  log<< ",";  log << obj_Normal[2] << endl;
 
         log << "FRICTION CONE" << endl;
@@ -244,11 +246,11 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
         log << obj_Normal[0];   log << "," ; log << obj_Normal[1];  log<< ",";  log << obj_Normal[2] << endl;
 
         //指の法線ベクトルと物体の法線ベクトルの成す角は，90度以上必要
-        if(fricCone_y * obj_Normal > 0){
-            fricCone_y[0] = -fricCone_y[0];
-            fricCone_y[1] = -fricCone_y[1];
-            fricCone_y[2] = -fricCone_y[2];
-        }
+//        if(fricCone_y * obj_Normal > 0){
+//            fricCone_y[0] = -fricCone_y[0];
+//            fricCone_y[1] = -fricCone_y[1];
+//            fricCone_y[2] = -fricCone_y[2];
+//        }
 
 
         log << "FRICTION CONE AFTER" << endl;
@@ -332,50 +334,63 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
 }
 
 
-vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas, dhVec3 object_center)
+vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas,
+                                          dhVec3 object_center, vector<int> force_areas)
 {
-    vector<vector<double>> GraspMatrix(6,vector<double>(3*contact_areas.size()));
+    vector<vector<double>> GraspMatrix(6,vector<double>(3*force_areas.size()));
 
-    for(size_t i=0; i<contact_areas.size(); i++){
+    for(size_t i=0; i<force_areas.size(); i++){
         GraspMatrix[0][3*i]   = 1;      // 1 0 0
         GraspMatrix[1][3*i+1] = 1;      // 0 1 0
         GraspMatrix[2][3*i+2] = 1;      // 0 0 1
 
         double rx,ry,rz;
-        rx = segm[contact_areas[i]].ObjectCoG[0] - object_center[0];
-        ry = segm[contact_areas[i]].ObjectCoG[1] - object_center[1];
-        rz = segm[contact_areas[i]].ObjectCoG[2] - object_center[2];
+        rx = segm[force_areas[i]].ObjectCoG[0] - object_center[0];
+        ry = segm[force_areas[i]].ObjectCoG[1] - object_center[1];
+        rz = segm[force_areas[i]].ObjectCoG[2] - object_center[2];
 
         GraspMatrix[3][3*i+1] = -rz;     GraspMatrix[3][3*i+2] = ry;
         GraspMatrix[4][3*i] = rz;      GraspMatrix[4][3*i+2] = -rx;
         GraspMatrix[5][3*i] = -ry;       GraspMatrix[5][3*i+1] = rx;
     }
-//    for(int i=0; i<GraspMatrix.size(); i++){      // G　確認用
-//        for(int j=0; j<GraspMatrix[0].size(); j++){
-//            DH_LOG(QString::number(GraspMatrix[i][j]),0);
-//        }
-//    }
 
     return GraspMatrix;
 }
 
 
-vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas)
+vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas,
+                              vector<vector<QString>> ObjPs_normal, vector<int> &force_areas)
 {
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log3.txt";
+    ofstream log3(fn, ios::app);
+
     vector<double> eT;
-    for(int i=0; i<contact_areas.size(); i++){
-        dhVec3 depth_vec = segm[contact_areas[i]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
+    log3 << endl;
+    for(size_t i=0; i<contact_areas.size(); i++){
+        for(size_t j=0; j<ObjPs_normal.size(); j++){
+            if(contact_areas[i] == ObjPs_normal[j][0].toInt()){
+                log3 << contact_areas[i] << endl;
+                force_areas.push_back(contact_areas[i]);
+                dhVec3 depth_vec = segm[contact_areas[i]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
 
-        double absx, absy, absz;
-        absx = (depth_vec[0] > 0) ? depth_vec[0] : -depth_vec[0];
-        absy = (depth_vec[1] > 0) ? depth_vec[1] : -depth_vec[1];
-        absz = (depth_vec[2] > 0) ? depth_vec[2] : -depth_vec[2];
+                double absx, absy, absz;
+                absx = (depth_vec[0] > 0) ? depth_vec[0] : -depth_vec[0];
+                absy = (depth_vec[1] > 0) ? depth_vec[1] : -depth_vec[1];
+                absz = (depth_vec[2] > 0) ? depth_vec[2] : -depth_vec[2];
 
-        double elesum = absx + absy + absz;
+                double elesum = absx + absy + absz;
 
-        eT.push_back(depth_vec[0]/elesum);
-        eT.push_back(depth_vec[1]/elesum);
-        eT.push_back(depth_vec[2]/elesum);
+                eT.push_back(depth_vec[0]/elesum);
+                eT.push_back(depth_vec[1]/elesum);
+                eT.push_back(depth_vec[2]/elesum);
+            }
+        }
+
+    }
+    log3 << "eT size is:";  log3 << eT.size() << endl;
+    log3 << "force_areas is:";
+    for(int i=0;i<force_areas.size();i++){
+        log3 << force_areas[i];   log3 << ",";
     }
 
     return eT;
@@ -386,11 +401,8 @@ vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas)
 vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int> bone_index ,
                                               vector<QString> JacobianBones, vector<vector<int>> DoFs,
                                               vector<QString> contact_bones, vector<int> contact_areas,
-                                              segment* segm)
+                                              vector<int> force_areas, segment* segm, map<int,QString> atb)
 {
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log3.txt";
-    ofstream log3(fn, ios::app);
-
     vector<vector<double>> ContactJacobian;
     for(int i=0; i<JacobianBones.size(); i++){
         dhBone* tmplink;
@@ -398,18 +410,18 @@ vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int>
         vector<QString> tmpbones;
         vector<int> tmpdepths;
         getArmatureStructure(arm, tmplink, tmpbones, tmpdepths, JacobianBones[i]);
-
+        dhdelete(tmplink);
         for(int j=0; j<DoFs[ bone_index[JacobianBones[i]] ].size(); j++){
             dhMat44 Tmat = arm->bone(JacobianBones[i])->Twj;
             dhVec3 axis = Tmat.column(DoFs[ bone_index[JacobianBones[i]] ][j]).toVec3().normalized();
             dhVec3 orig = arm->bone(JacobianBones[i])->Porigin().toVec3();
 
             vector<double> jacobiVec;
-            for(int k=0; k<contact_bones.size(); k++){
+            for(int k=0; k<force_areas.size(); k++){
                 int flag = 0;
                 for(int l=0; l<tmpbones.size(); l++){
-                    if(tmpbones[l] == contact_bones[k]){
-                        dhVec3 jacobi_ele = axis.cross( (segm[contact_areas[k]].ObjectCoG - orig) );
+                    if(tmpbones[l] == atb[force_areas[k]]){
+                        dhVec3 jacobi_ele = axis.cross( (segm[force_areas[k]].ObjectCoG - orig) );
                         jacobiVec.push_back(jacobi_ele[0]);
                         jacobiVec.push_back(jacobi_ele[1]);
                         jacobiVec.push_back(jacobi_ele[2]);
@@ -427,21 +439,19 @@ vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int>
             ContactJacobian.push_back(jacobiVec);
         }
     }
-    for(int i=0;i<ContactJacobian.size(); i++){
-        for(int j=0;j<ContactJacobian[0].size();j++){
-            log3 << ContactJacobian[i][j];
-            log3 << ",";
-        }
-        log3 << endl;
-    }
+//    for(int i=0;i<ContactJacobian.size(); i++){
+//        for(int j=0;j<ContactJacobian[0].size();j++){
+//            log3 << ContactJacobian[i][j];
+//            log3 << ",";
+//        }
+//        log3 << endl;
+//    }
     return ContactJacobian;
 }
 
 vector<vector<double>> GetMomentArm_Force(vector<vector<QString>> MP, vector<QString> JacobianBones,
                                           vector<vector<int>> DoFs, map<QString, int> bone_index)
 {
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log4.txt";
-    ofstream log4(fn, ios::app);
 
     vector<vector<double>> MF;
     for(size_t i=0; i<JacobianBones.size(); i++){       //JacobianBones一つ一つにたいして
@@ -468,13 +478,13 @@ vector<vector<double>> GetMomentArm_Force(vector<vector<QString>> MP, vector<QSt
         }
     }
 
-    for(int i=0;i<MF.size(); i++){
-        for(int j=0;j<MF[0].size();j++){
-            log4 << MF[i][j];
-            log4 << ",";
-        }
-        log4 << endl;
-    }
+//    for(int i=0;i<MF.size(); i++){
+//        for(int j=0;j<MF[0].size();j++){
+//            log4 << MF[i][j];
+//            log4 << ",";
+//        }
+//        log4 << endl;
+//    }
     return MF;
 }
 
@@ -723,11 +733,15 @@ double GLPK_solve_LP1(vector<vector<double>> left, vector<double> right, vector<
     glp_simplex(lp, NULL);
     z = glp_get_obj_val(lp);
 
-    log << "LP1 value is" << endl;
+    log << "left:(";  log << left.size();  log << ",";  log << left[0].size();  log << ")" << endl;
+    log << "right:";  log << right.size() << endl;
+    log << "LP1: "; log << z <<endl;
+
     for(int j=1;j<=left[0].size(); j++){
         log << "f";  log << j;  log << ":";  log << glp_get_col_prim(lp, j);    log << "  ";
         if(j%5 == 4)    log << endl;
     }
+    log << endl;
 //    DH_LOG("LP1 value is "+QString::number(z),0);
 //    for(size_t j=1; j<=left[0].size(); j++){
 //        x.push_back(glp_get_col_prim(lp,j));
@@ -838,8 +852,8 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
                          double coef)
 {
     double FCeval;
-    const double fric_coef_young = 0.5;
-    const double obj_mass = 1000;      //[g]
+    const double fric_coef_young = 1.0;
+    const double obj_mass = 100;      //[g]
     const double gravity = 9.81;      //[m/s^2]
     dhVec3 object_center(15, 15, 75);       //後でAPIから関数探す
 //    dhVec3 object_center(50, 25, 3.5);
@@ -855,6 +869,9 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     bone_index["MDP"] = 12;     bone_index["RMCP"] = 13;    bone_index["RPP"] = 14;
     bone_index["RMP"] = 15;     bone_index["RDP"] = 16;     bone_index["PMCP"] =17;
     bone_index["PPP"] = 18;     bone_index["PMP"] = 19;     bone_index["PDP"] = 20;
+
+    map<int,QString> atb;
+    atb[0] = "TDP";  atb[2] = "IDP";  atb[5] = "MDP";  atb[8] = "RDP";  atb[11] = "PDP";
 
     double friction_coefficient = fric_coef_young*coef;
 
@@ -898,7 +915,8 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     }
     log2 << endl;
 
-    if(contact_bones.size() == 0){
+    if(contact_bones.size() == 0)
+    {
         DH_LOG("Force Closure does not exist.",0);
         return 1.0;
     }
@@ -921,13 +939,28 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     }
     log2 << endl << endl;
 
-    vector<vector<double>> GraspMatrix = ComputeGraspMatrix(segm, areas, object_center);
-    vector<vector<double>> FrictionMatrix = ComputeFrictionMatrix(segm, areas, friction_coefficient, ObjPs_normal);
-    vector<double> eT = GetBoundMatrix(segm, areas);
-    vector<vector<double>> ContactJacobian = ComputeContactJacobian(arm, bone_index, JacobianBones, DoFs,
-                                                  contact_bones, areas, segm);
-    vector<vector<double>> MomentArmForce = GetMomentArm_Force(MP, JacobianBones, DoFs, bone_index);
+    vector<int> force_areas;
+    vector<double> eT = GetBoundMatrix(segm, areas, ObjPs_normal, force_areas);
+    if(eT.size() == 0)
+    {
+        DH_LOG("Force Closure does not exist.",0);
+        return 1.0;
+    }
 
+    log2 << "a";
+    vector<vector<double>> GraspMatrix = ComputeGraspMatrix(segm, areas, object_center, force_areas);
+    log2 << "b";
+    vector<vector<double>> FrictionMatrix = ComputeFrictionMatrix(segm, areas, friction_coefficient,
+                                                                  ObjPs_normal, force_areas);
+    log2 << "c";
+    vector<vector<double>> ContactJacobian = ComputeContactJacobian(arm, bone_index, JacobianBones, DoFs,
+                                                  contact_bones, areas, force_areas, segm, atb);
+    log2 << "d";
+    vector<vector<double>> MomentArmForce = GetMomentArm_Force(MP, JacobianBones, DoFs, bone_index);
+    log2 << "e";
+
+
+//    delete segm;
 
     vector<vector<double>> left_lp1, left_lp2;
     vector<double> right_lp1, right_lp2;
