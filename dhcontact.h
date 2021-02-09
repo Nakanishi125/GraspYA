@@ -53,4 +53,6 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
                               segment* segm);
 
 
+void extract_nearpoints(segment segm, dhSkeletalSubspaceDeformation* bodySSD, int &minID1, int &minID2);
+
 #endif // DHCONTACT_H

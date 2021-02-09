@@ -267,6 +267,7 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
                 if(dist < mindist){
                     nearcogs      = bodySSD->Vi(segm[area].BodyPointsID[j])->pt.toVec3();
                     nearcogs_norm = bodySSD->Vi(segm[area].BodyPointsID[j])->normal.toVec3();
+                    mindist = dist;
                 }
             }
             segm[area].BodyCoG = nearcogs;
@@ -286,6 +287,34 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
             }
         }
 
+    }
+
+}
+
+
+void extract_nearpoints(segment segm, dhSkeletalSubspaceDeformation* bodySSD, int &minID1, int &minID2)
+{
+
+    double min_dist1 = DBL_MAX;
+    double min_dist2 = DBL_MAX;
+    for(int id=0; id<segm.BodyPointsID.size(); id++){   // have debugged
+
+        double dist = ( bodySSD->V(segm.BodyPointsID[id]).toVec3() - segm.BodyCoG ).norm();
+
+        if(dist != 0)
+        {
+            if(min_dist1 > dist){
+                min_dist2 = min_dist1;
+                minID2 = minID1;
+
+                min_dist1 = dist;
+                minID1 = segm.BodyPointsID[id];
+            }
+            else if(min_dist2 > dist){
+                min_dist2 = dist;
+                minID2 = segm.BodyPointsID[id];
+            }
+        }
     }
 
 }

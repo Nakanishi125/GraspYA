@@ -358,7 +358,7 @@ vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_are
 }
 
 
-vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas,
+vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas, dhSkeletalSubspaceDeformation* bodySSD,
                               vector<vector<QString>> ObjPs_normal, vector<int> &force_areas)
 {
     string fn = "C:\\Users\\ynunakanishi\\Desktop\\log3.txt";
@@ -371,6 +371,9 @@ vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas,
             if(contact_areas[i] == ObjPs_normal[j][0].toInt()){
                 log3 << contact_areas[i] << endl;
                 force_areas.push_back(contact_areas[i]);
+
+//                int id1 = -1;   int id2 = -1;
+//                extract_nearpoints(segm[contact_areas[i]], bodySSD, id1, id2);
                 dhVec3 depth_vec = segm[contact_areas[i]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
 
                 double absx, absy, absz;
@@ -802,13 +805,22 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
 
 
     glp_load_matrix(lp, cnt, ia, ja, ar);
-    glp_simplex(lp, NULL);
+    int ret = glp_simplex(lp, NULL);
     z = glp_get_obj_val(lp);
+
+    if(ret == GLP_EFAIL)log << "GLP_EFAIL" << endl;
+    if(ret == GLP_EOBJLL)log << "GLP_EOBJLL" << endl;
+    if(ret == GLP_EOBJUL)log << "GLP_EOBJUL" << endl;
+    if(ret == GLP_EITLIM)log << "GLP_EITLIM" << endl;
+    if(ret == GLP_ETMLIM)log << "GLP_ETMLIM" << endl;
+    if(ret == GLP_ENOPFS)log << "GLP_ENOPFS" << endl;
+    if(ret == GLP_ENODFS)log << "GLP_ENODFS" << endl;
+    if(ret == 0)    log << "success" << endl;
 
     log << "left:(";  log << left.size();  log << ",";  log << left[0].size();  log << ")" << endl;
     log << "right:";  log << right.size() << endl;
 
-    log << "LP2: "; log << z <<endl;
+    log << "LP2: "; log << ret; log << "->"; log << z <<endl;
     for(size_t j=1; j<=left[0].size(); j++){
         log << "f"; log << j; log << ":"; log << glp_get_col_prim(lp, j); log << "  ";
         if(j%5 == 4)    log << endl;
@@ -816,6 +828,20 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
     log << endl << endl;
 
     log << "here, confirm part" << endl;
+    log << "Gf = t" << endl;
+    for(int i=0; i<G.size(); i++){
+        double lsum = 0;
+
+        for(int j=0; j<G[0].size(); j++){
+            lsum += G[i][j]*glp_get_col_prim(lp,j+1);
+        }
+        double rsum = right[i];
+
+        log << lsum; log << ","; log << rsum << endl;
+    }
+    log << endl;
+
+    log << "Jf - MFA = 0" << endl;
     for(int i=0; i<J.size(); i++){
         double lsum=0;
         double rsum=0;
@@ -852,10 +878,10 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
                          double coef)
 {
     double FCeval;
-    const double fric_coef_young = 1.0;
-    const double obj_mass = 100;      //[g]
+    const double fric_coef_young = 0.8;
+    const double obj_mass = 1000;      //[g]
     const double gravity = 9.81;      //[m/s^2]
-    dhVec3 object_center(15, 15, 75);       //後でAPIから関数探す
+    dhVec3 object_center(25, 25, 125);       //後でAPIから関数探す
 //    dhVec3 object_center(50, 25, 3.5);
 
     string fn = "C:\\Users\\ynunakanishi\\Desktop\\log2.txt";
@@ -940,7 +966,7 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     log2 << endl << endl;
 
     vector<int> force_areas;
-    vector<double> eT = GetBoundMatrix(segm, areas, ObjPs_normal, force_areas);
+    vector<double> eT = GetBoundMatrix(segm, areas, bodySSD, ObjPs_normal, force_areas);
     if(eT.size() == 0)
     {
         DH_LOG("Force Closure does not exist.",0);
@@ -992,11 +1018,11 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     }
     else{
         fc_lp2 = GLPK_solve_LP2(left_lp2, right_lp2, coef_lp2, GraspMatrix, ContactJacobian, MomentArmForce);
-        if(fc_lp2 >= 0.2){
+        if(fc_lp2 >= 0.1){
             FCeval = 0.0;
         }
-        else if(fc_lp2 < 0.2){
-            FCeval = 1.0 - 25*fc_lp2*fc_lp2;
+        else if(fc_lp2 < 0.1){
+            FCeval = 100*(fc_lp2 - 0.1)*(fc_lp2 - 0.1);
         }
     }
 //    DH_LOG("Force Closure eval is "+QString::number(fc_lp2),0);

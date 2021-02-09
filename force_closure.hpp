@@ -20,7 +20,8 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
 vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas,
                                           dhVec3 object_center, vector<int> force_areas);
 
-vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas, vector<vector<QString>> ObjPs_normal);
+vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas, dhSkeletalSubspaceDeformation* bodySSD,
+                              vector<vector<QString>> ObjPs_normal);
 
 vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int> bone_index ,
                                               vector<QString> JacobianBones, vector<vector<int>> DoFs,
