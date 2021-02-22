@@ -28,8 +28,8 @@ void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal
 void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh)
 {
 
-    const int OBJ_X = 30;
-    const int OBJ_Y = 30;
+    const int OBJ_X = 80;
+    const int OBJ_Y = 80;
     const int OBJ_Z = 150;
 
     const int Number_of_Pts = 5000;
@@ -48,9 +48,9 @@ void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh)
 //        if((OBJ_Z/2)*(OBJ_Z/2) < x*x + y*y + z*z)   continue;
         //ここまで
         //円柱の時
-//        x = x - OBJ_X/2;
-//        y = y - OBJ_Y/2;
-//        if((OBJ_X/2)*(OBJ_X/2) < x*x + y*y) continue;
+        x = x - OBJ_X/2;
+        y = y - OBJ_Y/2;
+        if((OBJ_X/2)*(OBJ_X/2) < x*x + y*y) continue;
         //ここまで
 
         const dhVec4 pos(x, y, z, 0);

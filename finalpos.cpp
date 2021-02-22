@@ -181,6 +181,9 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
 int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
                        dhMesh* handMesh, dhMesh* objMesh, int age)
 {
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\nelder-mead.txt";
+    ofstream log(fn, ios::app);
+
     vector<vector<QString>> joints_list;        //ファイル類の読み込み
     vector<vector<QString>> joint_bone;
     vector<vector<QString>> DF;
@@ -294,12 +297,13 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
         if(status)  break;
 
         size = gsl_multimin_fminimizer_size(s);
-        status = gsl_multimin_test_size(size,1);        //重心と各頂点の平均距離が1以内
+        status = gsl_multimin_test_size(size,0.01);        //重心と各頂点の平均距離が1以内
 
         if(status == GSL_SUCCESS){
             DH_LOG("iter is "+QString::number(iter),0);
         }
 
+        log << "size is :";     log << size << endl;
     }while(status == GSL_CONTINUE && iter < 30000);
 
 

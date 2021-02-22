@@ -178,7 +178,8 @@ void GetJacobianBones(dhArmature* arm, vector<QString> bones, vector<QString> co
 
 
 vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_areas, double friction_coefficient,
-                                             vector<vector<QString>> ObjPs_normal, vector<int> force_areas)
+                                             vector<vector<QString>> ObjPs_normal, vector<int> force_areas,
+                                             dhSkeletalSubspaceDeformation* bodySSD)
 {
     QList<int> thumb = {0, 1, 16, 33};
     QList<int> index = {2, 3, 4, 17, 28, 29, 30, 31, 32};
@@ -187,63 +188,63 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
     QList<int> pinky = {11, 12, 19, 20, 21};
 
 
-    vector<vector<double>> FrictionMatrix(4*force_areas.size(),vector<double>(3*force_areas.size()));
+    vector<vector<double>> FrictionMatrix(3*4*force_areas.size(),vector<double>(3*3*force_areas.size()));
     double theta = atan(friction_coefficient);
 
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log6.txt";
-    ofstream log(fn, ios::app);
+//    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log6.txt";
+//    ofstream log(fn, ios::app);
 
     for(int area=0; area<force_areas.size(); area++){
 
         dhVec3 fricCone_y = segm[force_areas[area]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
-        fricCone_y.normalize();                                            //指の法線はめり込むと逆向き法線になり得る
+        fricCone_y.normalize();
 
-        dhVec3 obj_Normal;
-        if(thumb.contains(force_areas[area]))
-        {
-            obj_Normal[0] = ObjPs_normal[0][1].toDouble();
-            obj_Normal[1] = ObjPs_normal[0][2].toDouble();
-            obj_Normal[2] = ObjPs_normal[0][3].toDouble();
-        }
-        else if(index.contains(force_areas[area]))
-        {
-            obj_Normal[0] = ObjPs_normal[1][1].toDouble();
-            obj_Normal[1] = ObjPs_normal[1][2].toDouble();
-            obj_Normal[2] = ObjPs_normal[1][3].toDouble();
-        }
-        else if(middle.contains(force_areas[area]))
-        {
-            obj_Normal[0] = ObjPs_normal[2][1].toDouble();
-            obj_Normal[1] = ObjPs_normal[2][2].toDouble();
-            obj_Normal[2] = ObjPs_normal[2][3].toDouble();
-        }
-        else if(ring.contains(force_areas[area]))
-        {
-            obj_Normal[0] = ObjPs_normal[3][1].toDouble();
-            obj_Normal[1] = ObjPs_normal[3][2].toDouble();
-            obj_Normal[2] = ObjPs_normal[3][3].toDouble();
-        }
-        else if(pinky.contains(force_areas[area]))
-        {
-            obj_Normal[0] = ObjPs_normal[4][1].toDouble();
-            obj_Normal[1] = ObjPs_normal[4][2].toDouble();
-            obj_Normal[2] = ObjPs_normal[4][3].toDouble();
-        }
-        else{
-            DH_LOG("not belong to any fingers",0);
-            DH_LOG(QString::number(force_areas[area]),0);
-            obj_Normal = segm[force_areas[area]].ObjectNormal;
-        }
+//        dhVec3 obj_Normal;
+//        if(thumb.contains(force_areas[area]))
+//        {
+//            obj_Normal[0] = ObjPs_normal[0][1].toDouble();
+//            obj_Normal[1] = ObjPs_normal[0][2].toDouble();
+//            obj_Normal[2] = ObjPs_normal[0][3].toDouble();
+//        }
+//        else if(index.contains(force_areas[area]))
+//        {
+//            obj_Normal[0] = ObjPs_normal[1][1].toDouble();
+//            obj_Normal[1] = ObjPs_normal[1][2].toDouble();
+//            obj_Normal[2] = ObjPs_normal[1][3].toDouble();
+//        }
+//        else if(middle.contains(force_areas[area]))
+//        {
+//            obj_Normal[0] = ObjPs_normal[2][1].toDouble();
+//            obj_Normal[1] = ObjPs_normal[2][2].toDouble();
+//            obj_Normal[2] = ObjPs_normal[2][3].toDouble();
+//        }
+//        else if(ring.contains(force_areas[area]))
+//        {
+//            obj_Normal[0] = ObjPs_normal[3][1].toDouble();
+//            obj_Normal[1] = ObjPs_normal[3][2].toDouble();
+//            obj_Normal[2] = ObjPs_normal[3][3].toDouble();
+//        }
+//        else if(pinky.contains(force_areas[area]))
+//        {
+//            obj_Normal[0] = ObjPs_normal[4][1].toDouble();
+//            obj_Normal[1] = ObjPs_normal[4][2].toDouble();
+//            obj_Normal[2] = ObjPs_normal[4][3].toDouble();
+//        }
+//        else{
+//            DH_LOG("not belong to any fingers",0);
+//            DH_LOG(QString::number(force_areas[area]),0);
+//            obj_Normal = segm[force_areas[area]].ObjectNormal;
+//        }
 
-        obj_Normal.normalize();
+//        obj_Normal.normalize();
 
-        log << force_areas[area] << endl;
-        log << obj_Normal[0];   log << "," ; log << obj_Normal[1];  log<< ",";  log << obj_Normal[2] << endl;
+//        log << force_areas[area] << endl;
+//        log << obj_Normal[0];   log << "," ; log << obj_Normal[1];  log<< ",";  log << obj_Normal[2] << endl;
 
-        log << "FRICTION CONE" << endl;
-        log << fricCone_y[0];   log << "," ; log << fricCone_y[1];  log<< ",";  log << fricCone_y[2] << endl;
-        log << "Finger to Center" << endl;
-        log << obj_Normal[0];   log << "," ; log << obj_Normal[1];  log<< ",";  log << obj_Normal[2] << endl;
+//        log << "FRICTION CONE" << endl;
+//        log << fricCone_y[0];   log << "," ; log << fricCone_y[1];  log<< ",";  log << fricCone_y[2] << endl;
+//        log << "Finger to Center" << endl;
+//        log << obj_Normal[0];   log << "," ; log << obj_Normal[1];  log<< ",";  log << obj_Normal[2] << endl;
 
         //指の法線ベクトルと物体の法線ベクトルの成す角は，90度以上必要
 //        if(fricCone_y * obj_Normal > 0){
@@ -253,10 +254,10 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
 //        }
 
 
-        log << "FRICTION CONE AFTER" << endl;
-        log << fricCone_y[0];   log << "," ; log << fricCone_y[1];  log<< ",";  log << fricCone_y[2] << endl;
+//        log << "FRICTION CONE AFTER" << endl;
+//        log << fricCone_y[0];   log << "," ; log << fricCone_y[1];  log<< ",";  log << fricCone_y[2] << endl;
 
-        log << endl << endl;
+//        log << endl << endl;
 
         dhVec3 fricCone_x(1, 0, -fricCone_y[0]/fricCone_y[2]);      //y方向を0とする．
         fricCone_x.normalize();
@@ -266,6 +267,31 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
 
         dhVec3 fricCone_z(1, yy, zz);
         fricCone_z.normalize();
+
+        int id1 = -1;   int id2 = -1;
+        extract_nearpoints(segm[force_areas[area]], bodySSD, id1, id2);
+
+        dhVec3 fricCone_ya = bodySSD->Vi(id1)->normal.toVec3();
+        fricCone_ya.normalized();
+        dhVec3 fricCone_yb = bodySSD->Vi(id2)->normal.toVec3();
+        fricCone_yb.normalized();
+
+        dhVec3 fricCone_xa(1, 0, -fricCone_ya[0]/fricCone_ya[2]);      //y方向を0とする．
+        fricCone_xa.normalize();
+        dhVec3 fricCone_xb(1, 0, -fricCone_yb[0]/fricCone_yb[2]);      //y方向を0とする．
+        fricCone_xb.normalize();
+
+        double zza = -1/(fricCone_xa[2]);
+        double yya = -fricCone_ya[0]/fricCone_ya[1] - zz*fricCone_ya[2]/fricCone_ya[1];
+
+        dhVec3 fricCone_za(1, yya, zza);
+        fricCone_za.normalize();
+
+        double zzb = -1/(fricCone_xb[2]);
+        double yyb = -fricCone_yb[0]/fricCone_yb[1] - zz*fricCone_yb[2]/fricCone_yb[1];
+
+        dhVec3 fricCone_zb(1, yyb, zzb);
+        fricCone_zb.normalize();
 
 //        DH_LOG("coord1:"+QString::number(fricConeHeight[0])+","+QString::number(fricConeHeight[1])+","+QString::number(fricConeHeight[2]),0);
 //        DH_LOG("coord2:"+QString::number(fricCone_x[0])+","+QString::number(fricCone_x[1])+","+QString::number(fricCone_x[2]),0);
@@ -281,18 +307,61 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
         dhVec3 n3 = z3*fricCone_y;
         dhVec3 n4 = z4*fricCone_y;
 
-        FrictionMatrix[4*area][3*area]     = n1[0];
-        FrictionMatrix[4*area][3*area+1]   = n1[1];
-        FrictionMatrix[4*area][3*area+2]   = n1[2];
-        FrictionMatrix[4*area+1][3*area]   = n2[0];
-        FrictionMatrix[4*area+1][3*area+1] = n2[1];
-        FrictionMatrix[4*area+1][3*area+2] = n2[2];
-        FrictionMatrix[4*area+2][3*area]   = n3[0];
-        FrictionMatrix[4*area+2][3*area+1] = n3[1];
-        FrictionMatrix[4*area+2][3*area+2] = n3[2];
-        FrictionMatrix[4*area+3][3*area]   = n4[0];
-        FrictionMatrix[4*area+3][3*area+1] = n4[1];
-        FrictionMatrix[4*area+3][3*area+2] = n4[2];
+        dhMat33 z1a = RotateAroundAxis(fricCone_za, theta+M_PI/2).toMat33();
+        dhMat33 z2a = RotateAroundAxis(fricCone_za,-(theta+M_PI/2)).toMat33();
+        dhMat33 z3a = RotateAroundAxis(fricCone_xa, theta+M_PI/2).toMat33();
+        dhMat33 z4a = RotateAroundAxis(fricCone_xa,-(theta+M_PI/2)).toMat33();
+        dhMat33 z1b = RotateAroundAxis(fricCone_zb, theta+M_PI/2).toMat33();
+        dhMat33 z2b = RotateAroundAxis(fricCone_zb,-(theta+M_PI/2)).toMat33();
+        dhMat33 z3b = RotateAroundAxis(fricCone_xb, theta+M_PI/2).toMat33();
+        dhMat33 z4b = RotateAroundAxis(fricCone_xb,-(theta+M_PI/2)).toMat33();
+        dhVec3 n1a = z1a*fricCone_ya;
+        dhVec3 n2a = z2a*fricCone_ya;
+        dhVec3 n3a = z3a*fricCone_ya;
+        dhVec3 n4a = z4a*fricCone_ya;
+        dhVec3 n1b = z1b*fricCone_yb;
+        dhVec3 n2b = z2b*fricCone_yb;
+        dhVec3 n3b = z3b*fricCone_yb;
+        dhVec3 n4b = z4b*fricCone_yb;
+
+        FrictionMatrix[3*4*area][3*3*area]     = n1[0];
+        FrictionMatrix[3*4*area][3*3*area+1]   = n1[1];
+        FrictionMatrix[3*4*area][3*3*area+2]   = n1[2];
+        FrictionMatrix[3*4*area+1][3*3*area]   = n2[0];
+        FrictionMatrix[3*4*area+1][3*3*area+1] = n2[1];
+        FrictionMatrix[3*4*area+1][3*3*area+2] = n2[2];
+        FrictionMatrix[3*4*area+2][3*3*area]   = n3[0];
+        FrictionMatrix[3*4*area+2][3*3*area+1] = n3[1];
+        FrictionMatrix[3*4*area+2][3*3*area+2] = n3[2];
+        FrictionMatrix[3*4*area+3][3*3*area]   = n4[0];
+        FrictionMatrix[3*4*area+3][3*3*area+1] = n4[1];
+        FrictionMatrix[3*4*area+3][3*3*area+2] = n4[2];
+
+        FrictionMatrix[3*4*area+4][3*3*area+3]   = n1a[0];
+        FrictionMatrix[3*4*area+4][3*3*area+4]   = n1a[1];
+        FrictionMatrix[3*4*area+4][3*3*area+5]   = n1a[2];
+        FrictionMatrix[3*4*area+5][3*3*area+3]   = n2a[0];
+        FrictionMatrix[3*4*area+5][3*3*area+4]   = n2a[1];
+        FrictionMatrix[3*4*area+5][3*3*area+5]   = n2a[2];
+        FrictionMatrix[3*4*area+6][3*3*area+3]   = n3a[0];
+        FrictionMatrix[3*4*area+6][3*3*area+4]   = n3a[1];
+        FrictionMatrix[3*4*area+6][3*3*area+5]   = n3a[2];
+        FrictionMatrix[3*4*area+7][3*3*area+3]   = n4a[0];
+        FrictionMatrix[3*4*area+7][3*3*area+4]   = n4a[1];
+        FrictionMatrix[3*4*area+7][3*3*area+5]   = n4a[2];
+
+        FrictionMatrix[3*4*area+8][3*3*area+6]   = n1b[0];
+        FrictionMatrix[3*4*area+8][3*3*area+7]   = n1b[1];
+        FrictionMatrix[3*4*area+8][3*3*area+8]   = n1b[2];
+        FrictionMatrix[3*4*area+9][3*3*area+6]   = n2b[0];
+        FrictionMatrix[3*4*area+9][3*3*area+7]   = n2b[1];
+        FrictionMatrix[3*4*area+9][3*3*area+8]   = n2b[2];
+        FrictionMatrix[3*4*area+10][3*3*area+6]   = n3b[0];
+        FrictionMatrix[3*4*area+10][3*3*area+7]   = n3b[1];
+        FrictionMatrix[3*4*area+10][3*3*area+8]   = n3b[2];
+        FrictionMatrix[3*4*area+11][3*3*area+6]   = n4b[0];
+        FrictionMatrix[3*4*area+11][3*3*area+7]   = n4b[1];
+        FrictionMatrix[3*4*area+11][3*3*area+8]   = n4b[2];
 
 
 //ここから変更
@@ -329,31 +398,67 @@ vector<vector<double>> ComputeFrictionMatrix(segment* segm, vector<int> contact_
 //ここまで
 
     }
+//    log << FrictionMatrix.size();log<<",";log<<FrictionMatrix[0].size() << endl;
+//    for(int i=0; i<FrictionMatrix.size(); i++){
+//        for(int j=0;j <FrictionMatrix[0].size(); j++){
+//            log << FrictionMatrix[i][j] << ",";
+//        }
+//        log << endl;
+//    }
 
     return FrictionMatrix;
 }
 
 
 vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_areas,
-                                          dhVec3 object_center, vector<int> force_areas)
+                                          dhVec3 object_center, vector<int> force_areas, dhSkeletalSubspaceDeformation* bodySSD)
 {
-    vector<vector<double>> GraspMatrix(6,vector<double>(3*force_areas.size()));
+//    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log15.txt";
+//    ofstream log(fn, ios::app);
+
+    vector<vector<double>> GraspMatrix(6,vector<double>(3*3*force_areas.size()));
 
     for(size_t i=0; i<force_areas.size(); i++){
-        GraspMatrix[0][3*i]   = 1;      // 1 0 0
-        GraspMatrix[1][3*i+1] = 1;      // 0 1 0
-        GraspMatrix[2][3*i+2] = 1;      // 0 0 1
+        GraspMatrix[0][9*i]   = 1;   GraspMatrix[0][9*i+3]   = 1;       GraspMatrix[0][9*i+6]   = 1;        // 1 0 0
+        GraspMatrix[1][9*i+1] = 1;   GraspMatrix[1][9*i+4] = 1;         GraspMatrix[1][9*i+7] = 1;         // 0 1 0
+        GraspMatrix[2][9*i+2] = 1;   GraspMatrix[2][9*i+5] = 1;         GraspMatrix[2][9*i+8] = 1;         // 0 0 1
 
         double rx,ry,rz;
         rx = segm[force_areas[i]].ObjectCoG[0] - object_center[0];
         ry = segm[force_areas[i]].ObjectCoG[1] - object_center[1];
         rz = segm[force_areas[i]].ObjectCoG[2] - object_center[2];
 
-        GraspMatrix[3][3*i+1] = -rz;     GraspMatrix[3][3*i+2] = ry;
-        GraspMatrix[4][3*i] = rz;      GraspMatrix[4][3*i+2] = -rx;
-        GraspMatrix[5][3*i] = -ry;       GraspMatrix[5][3*i+1] = rx;
+        GraspMatrix[3][9*i+1] = -rz;     GraspMatrix[3][9*i+2] = ry;
+        GraspMatrix[4][9*i] = rz;      GraspMatrix[4][9*i+2] = -rx;
+        GraspMatrix[5][9*i] = -ry;       GraspMatrix[5][9*i+1] = rx;
+
+        int id1 = -1;   int id2 = -1;
+        extract_nearpoints(segm[force_areas[i]], bodySSD, id1, id2);
+        double rx1,ry1,rz1;
+        rx1 = bodySSD->Vi(id1)->pt.toVec3()[0] - object_center[0];
+        ry1 = bodySSD->Vi(id1)->pt.toVec3()[1] - object_center[1];
+        rz1 = bodySSD->Vi(id1)->pt.toVec3()[2] - object_center[2];
+
+        GraspMatrix[3][9*i+4] = -rz1;     GraspMatrix[3][9*i+5] = ry1;
+        GraspMatrix[4][9*i+3] = rz1;      GraspMatrix[4][9*i+5] = -rx1;
+        GraspMatrix[5][9*i+3] = -ry1;     GraspMatrix[5][9*i+4] = rx1;
+
+        double rx2,ry2,rz2;
+        rx2 = bodySSD->Vi(id2)->pt.toVec3()[0] - object_center[0];
+        ry2 = bodySSD->Vi(id2)->pt.toVec3()[1] - object_center[1];
+        rz2 = bodySSD->Vi(id2)->pt.toVec3()[2] - object_center[2];
+
+        GraspMatrix[3][9*i+7] = -rz2;     GraspMatrix[3][9*i+8] = ry2;
+        GraspMatrix[4][9*i+6] = rz2;      GraspMatrix[4][9*i+8] = -rx2;
+        GraspMatrix[5][9*i+6] = -ry2;       GraspMatrix[5][9*i+7] = rx2;
     }
 
+//    for(int i=0; i<GraspMatrix.size(); i++){
+//        for(int j=0;j <GraspMatrix[0].size(); j++){
+//            log << GraspMatrix[i][j] << ",";
+//        }
+//        log << endl;
+//    }
     return GraspMatrix;
 }
 
@@ -361,20 +466,21 @@ vector<vector<double>> ComputeGraspMatrix(segment* segm, vector<int> contact_are
 vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas, dhSkeletalSubspaceDeformation* bodySSD,
                               vector<vector<QString>> ObjPs_normal, vector<int> &force_areas)
 {
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log3.txt";
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\et.txt";
     ofstream log3(fn, ios::app);
 
     vector<double> eT;
-    log3 << endl;
     for(size_t i=0; i<contact_areas.size(); i++){
         for(size_t j=0; j<ObjPs_normal.size(); j++){
             if(contact_areas[i] == ObjPs_normal[j][0].toInt()){
-                log3 << contact_areas[i] << endl;
                 force_areas.push_back(contact_areas[i]);
 
-//                int id1 = -1;   int id2 = -1;
-//                extract_nearpoints(segm[contact_areas[i]], bodySSD, id1, id2);
+                int id1 = -1;   int id2 = -1;
+                extract_nearpoints(segm[contact_areas[i]], bodySSD, id1, id2);
                 dhVec3 depth_vec = segm[contact_areas[i]].BodyCoG_Normal;      //摩擦円錐の高さ方向ベクトル
+                dhVec3 depth_vec1 = bodySSD->Vi(id1)->normal.toVec3();  //
+                dhVec3 depth_vec2 = bodySSD->Vi(id2)->normal.toVec3();  //
+
 
                 double absx, absy, absz;
                 absx = (depth_vec[0] > 0) ? depth_vec[0] : -depth_vec[0];
@@ -386,6 +492,28 @@ vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas, dhSkelet
                 eT.push_back(depth_vec[0]/elesum);
                 eT.push_back(depth_vec[1]/elesum);
                 eT.push_back(depth_vec[2]/elesum);
+
+                double absx1, absy1, absz1;
+                absx1 = (depth_vec1[0] > 0) ? depth_vec1[0] : -depth_vec1[0];
+                absy1 = (depth_vec1[1] > 0) ? depth_vec1[1] : -depth_vec1[1];
+                absz1 = (depth_vec1[2] > 0) ? depth_vec1[2] : -depth_vec1[2];
+
+                double elesum1 = absx1 + absy1 + absz1;
+
+                eT.push_back(depth_vec1[0]/elesum1);
+                eT.push_back(depth_vec1[1]/elesum1);
+                eT.push_back(depth_vec1[2]/elesum1);
+
+                double absx2, absy2, absz2;
+                absx2 = (depth_vec2[0] > 0) ? depth_vec2[0] : -depth_vec2[0];
+                absy2 = (depth_vec2[1] > 0) ? depth_vec2[1] : -depth_vec2[1];
+                absz2 = (depth_vec2[2] > 0) ? depth_vec2[2] : -depth_vec2[2];
+
+                double elesum2 = absx2 + absy2 + absz2;
+
+                eT.push_back(depth_vec2[0]/elesum2);
+                eT.push_back(depth_vec2[1]/elesum2);
+                eT.push_back(depth_vec2[2]/elesum2);
             }
         }
 
@@ -404,8 +532,11 @@ vector<double> GetBoundMatrix(segment* segm, vector<int> contact_areas, dhSkelet
 vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int> bone_index ,
                                               vector<QString> JacobianBones, vector<vector<int>> DoFs,
                                               vector<QString> contact_bones, vector<int> contact_areas,
-                                              vector<int> force_areas, segment* segm, map<int,QString> atb)
+                                              vector<int> force_areas, segment* segm, map<int,QString> atb,
+                                              dhSkeletalSubspaceDeformation *bodySSD)
 {
+//    string fn = "C:\\Users\\ynunakanishi\\Desktop\\logjacobi.txt";
+//    ofstream log(fn, ios::app);
     vector<vector<double>> ContactJacobian;
     for(int i=0; i<JacobianBones.size(); i++){
         dhBone* tmplink;
@@ -425,14 +556,30 @@ vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int>
                 for(int l=0; l<tmpbones.size(); l++){
                     if(tmpbones[l] == atb[force_areas[k]]){
                         dhVec3 jacobi_ele = axis.cross( (segm[force_areas[k]].ObjectCoG - orig) );
+                        int id1 = -1;   int id2 = -1;
+                        extract_nearpoints(segm[force_areas[k]], bodySSD, id1, id2);
+                        dhVec3 jacobiVec1 = axis.cross( bodySSD->Vi(id1)->pt.toVec3() - orig ) ;  //
+                        dhVec3 jacobiVec2 = axis.cross (bodySSD->Vi(id2)->pt.toVec3() - orig ) ;  //
                         jacobiVec.push_back(jacobi_ele[0]);
                         jacobiVec.push_back(jacobi_ele[1]);
                         jacobiVec.push_back(jacobi_ele[2]);
+                        jacobiVec.push_back(jacobiVec1[0]);
+                        jacobiVec.push_back(jacobiVec1[1]);
+                        jacobiVec.push_back(jacobiVec1[2]);
+                        jacobiVec.push_back(jacobiVec2[0]);
+                        jacobiVec.push_back(jacobiVec2[1]);
+                        jacobiVec.push_back(jacobiVec2[2]);
                         flag = 1;
                         break;
                     }
                 }
                 if(flag == 0){
+                    jacobiVec.push_back(0.0);
+                    jacobiVec.push_back(0.0);
+                    jacobiVec.push_back(0.0);
+                    jacobiVec.push_back(0.0);
+                    jacobiVec.push_back(0.0);
+                    jacobiVec.push_back(0.0);
                     jacobiVec.push_back(0.0);
                     jacobiVec.push_back(0.0);
                     jacobiVec.push_back(0.0);
@@ -449,6 +596,7 @@ vector<vector<double>> ComputeContactJacobian(dhArmature* arm, map<QString, int>
 //        }
 //        log3 << endl;
 //    }
+//    log << ContactJacobian.size();log<<",";log<<ContactJacobian[0].size() << endl;
     return ContactJacobian;
 }
 
@@ -692,7 +840,7 @@ void Adapt_to_glpk2(vector<double> mg, vector<vector<double>> G, vector<vector<d
 double GLPK_solve_LP1(vector<vector<double>> left, vector<double> right, vector<vector<double>> G,
                   vector<double> coef)
 {    
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log5.txt";
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\log_LP1.txt";
     ofstream log(fn, ios::app);
 
     double z;
@@ -762,7 +910,7 @@ double GLPK_solve_LP1(vector<vector<double>> left, vector<double> right, vector<
 double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<double> coef,
                       vector<vector<double>> G, vector<vector<double>> J,vector<vector<double>> MF)
 {
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log.txt";
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\log_LP2.txt";
     ofstream log(fn, ios::app);
 
     double z;
@@ -879,12 +1027,12 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 {
     double FCeval;
     const double fric_coef_young = 0.8;
-    const double obj_mass = 1000;      //[g]
+    const double obj_mass = 100;      //[g]
     const double gravity = 9.81;      //[m/s^2]
-    dhVec3 object_center(25, 25, 125);       //後でAPIから関数探す
+    dhVec3 object_center(40, 40, 75);       //後でAPIから関数探す
 //    dhVec3 object_center(50, 25, 3.5);
 
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\log2.txt";
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\log_main.txt";
     ofstream log2(fn, ios::app);
 
     map<QString, int> bone_index;
@@ -897,11 +1045,19 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     bone_index["PPP"] = 18;     bone_index["PMP"] = 19;     bone_index["PDP"] = 20;
 
     map<int,QString> atb;
-    atb[0] = "TDP";  atb[2] = "IDP";  atb[5] = "MDP";  atb[8] = "RDP";  atb[11] = "PDP";
+    atb[0] = "TDP";  atb[1] = "TPP";  atb[2] = "IDP";   atb[3] = "IMP";     atb[4] = "IPP";
+    atb[5] = "MDP";  atb[6] = "MMP";  atb[7] = "MPP";   atb[8] = "RDP";     atb[9] = "RMP";
+    atb[10] = "RPP"; atb[11] = "PDP"; atb[12] = "PMP";  atb[13] = "MMCP";    atb[14] = "TMCP";
+    atb[15] = "RMCP"; atb[16] = "TDP"; atb[17] = "IDP"; atb[18] = "MDP";    atb[19] = "PDP";
+    atb[20] = "PDP";  atb[21] = "PMP"; atb[22] = "RDP";  atb[23] = "RMP";   atb[24] = "RPP";
+    atb[25] = "MDP";  atb[26] = "MMP"; atb[27] = "MPP";  atb[28] = "IDP";   atb[29] = "IMP";
+    atb[30] = "IPP";  atb[31] = "IMCP"; atb[32] = "IMCP"; atb[33] = "TDP";
 
     double friction_coefficient = fric_coef_young*coef;
 
-    vector<double> mg = {obj_mass*gravity/1000, 0, 0};
+//    vector<double> mg = { 0, obj_mass*gravity/1000, 0};
+    vector<double> mg = { obj_mass*gravity/1000, 0, 0};
+//    vector<double> mg = {  0, 0, obj_mass*gravity/1000};
 
     vector<vector<int>> DoFs = { {}, {}, {0,2}, {0,2}, {0}, {}, {0,2}, {0}, {0}, {}, {0,2}, {0},{0},
                                  {}, {0,2}, {0}, {0}, {}, {0,2}, {0}, {0}};
@@ -965,6 +1121,7 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     }
     log2 << endl << endl;
 
+    log2 << "a";
     vector<int> force_areas;
     vector<double> eT = GetBoundMatrix(segm, areas, bodySSD, ObjPs_normal, force_areas);
     if(eT.size() == 0)
@@ -973,17 +1130,21 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
         return 1.0;
     }
 
-    log2 << "a";
-    vector<vector<double>> GraspMatrix = ComputeGraspMatrix(segm, areas, object_center, force_areas);
+
+    vector<vector<double>> GraspMatrix = ComputeGraspMatrix(segm, areas, object_center, force_areas, bodySSD);
     log2 << "b";
+
     vector<vector<double>> FrictionMatrix = ComputeFrictionMatrix(segm, areas, friction_coefficient,
-                                                                  ObjPs_normal, force_areas);
+                                                                  ObjPs_normal, force_areas, bodySSD);
     log2 << "c";
+
     vector<vector<double>> ContactJacobian = ComputeContactJacobian(arm, bone_index, JacobianBones, DoFs,
-                                                  contact_bones, areas, force_areas, segm, atb);
+                                                  contact_bones, areas, force_areas, segm, atb, bodySSD);
     log2 << "d";
+
     vector<vector<double>> MomentArmForce = GetMomentArm_Force(MP, JacobianBones, DoFs, bone_index);
     log2 << "e";
+
 
 
 //    delete segm;
@@ -998,11 +1159,11 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 //    DH_LOG("MuscleNumber is:"+QString::number(MP.size())+","+QString::number(MP[0].size()-2),0);
 
     Adapt_to_glpk1(GraspMatrix, FrictionMatrix, eT, left_lp1, right_lp1, coef_lp1);
-
+    log2 << "f";
 
     Adapt_to_glpk2(mg, GraspMatrix, ContactJacobian, MP, MomentArmForce, FrictionMatrix,
                    left_lp2, right_lp2, coef_lp2);
-
+    log2 << "g";
 
 //    DH_LOG("LP2_left is:"+QString::number(left_lp2.size())+","+QString::number(left_lp2[0].size()),0);
 //    DH_LOG("LP2_right is:"+QString::number(right_lp2.size()),0);
@@ -1011,6 +1172,7 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
 
     double fc_lp1, fc_lp2;
     fc_lp1 = GLPK_solve_LP1(left_lp1,right_lp1,GraspMatrix,coef_lp1);
+    log2 << "h";
 
     if(fc_lp1 == 0){
         DH_LOG("Force Closure does not exist.",0);
@@ -1018,6 +1180,8 @@ double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD
     }
     else{
         fc_lp2 = GLPK_solve_LP2(left_lp2, right_lp2, coef_lp2, GraspMatrix, ContactJacobian, MomentArmForce);
+        log2 << "i";
+
         if(fc_lp2 >= 0.1){
             FCeval = 0.0;
         }
