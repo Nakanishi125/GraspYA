@@ -16,9 +16,10 @@
 #include "dhcontact.h"
 
 
-void prepare_colleval(dhArmature* arm, double &size, dhPointCloud* internal, dhMesh* objMesh);
+void prepare_colleval(dhArmature* arm, double &size, dhPointCloud* internal, dhMesh* objMesh,
+                      vector<vector<QString>> &input_set);
 
-void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh);
+void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh, vector<vector<QString>> input_set);
 
 void extract_contactPoints(dhSkeletalSubspaceDeformation* ssd, dhPointCloud* pts,
                            dhPointCloudAsVertexRef* &bodyPoints, dhPointCloudAsVertexRef* &objectPoints);

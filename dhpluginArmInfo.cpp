@@ -246,9 +246,10 @@ double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloud* internal = dhnew<dhPointCloud>();
+    vector<vector<QString>> input_set;
     double hand_size;
 
-    prepare_colleval(arm, hand_size, internal, objMesh);
+    prepare_colleval(arm, hand_size, internal, objMesh, input_set);
     extract_contactPoints(ssd, internal, bodyPoints, objectPoints);
 
     double eval = collision_eval(arm, bodyPoints, objectPoints, hand_size);
@@ -263,6 +264,7 @@ double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDefo
                                          dhMesh* bodyMesh, dhMesh* objMesh, int age)
 {
     vector<vector<QString>> ObjPs_normal;
+    vector<vector<QString>> input_set;
     vector<vector<QString>> MP;
     vector<vector<QString>> color_def;
     vector<vector<QString>> area_to_bone;
@@ -283,12 +285,25 @@ double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDefo
         return 0;
     }
 
+//=============================
+// settings.csvの読み込み
+//=============================
+    QString setting = "C:\\kenkyu\\GraspYA\\data\\settings.csv";
+
+    Csv Obj_set(setting);
+    if(!Obj_set.getCsv(input_set)){
+        DH_LOG("cannot read settings.csv",0);
+        return 0;
+    }
+
+
     ObjPs_normal.erase(ObjPs_normal.begin());
-    generate_points_inobject(internal, objMesh);
+    generate_points_inobject(internal, objMesh, input_set);
     prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
     extract_contactPoints(bodySSD, internal, bodyPoints, objectPoints);
 
-    double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, ObjPs_normal, MP, color_def, area_to_bone, bodyPoints, coef);
+    double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, ObjPs_normal, MP,
+                                    color_def, area_to_bone, bodyPoints, coef, input_set);
     dhdelete(bodyPoints);
     dhdelete(objectPoints);
     dhdelete(internal);

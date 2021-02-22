@@ -13,24 +13,44 @@
 #include "dhSkeletalSubspaceDeformation.h"
 #include "dhcontact.h"
 #include "collision_eval.hpp"
+#include "csv.hpp"
 
 
 using namespace std;
 
-void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal, dhMesh* objMesh)
+void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal, dhMesh* objMesh,
+                      vector<vector<QString>> &input_set)
 {
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\log_setting.txt";
+    ofstream log(fn, ios::app);
+//=============================
+// settings.csvの読み込み
+//=============================
+    QString setting = "C:\\kenkyu\\GraspYA\\data\\settings.csv";
+
+    Csv Obj_set(setting);
+    if(!Obj_set.getCsv(input_set)){
+        DH_LOG("cannot read settings.csv",0);
+        return ;
+    }
+    for(int i=0; i<input_set.size(); i++){
+        for(int j=0; j<input_set[i].size(); j++){
+            log << input_set[i][j] << endl;
+        }
+    }
+
     hand_size = hand_length(arm);
-    generate_points_inobject(internal, objMesh);
+    generate_points_inobject(internal, objMesh, input_set);
 }
 
 
 
-void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh)
+void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh, vector<vector<QString>> input_set)
 {
 
-    const int OBJ_X = 80;
-    const int OBJ_Y = 80;
-    const int OBJ_Z = 150;
+    const int OBJ_X = input_set[2][1].toDouble();
+    const int OBJ_Y = input_set[2][2].toDouble();
+    const int OBJ_Z = input_set[2][3].toDouble();
 
     const int Number_of_Pts = 5000;
 
@@ -42,15 +62,19 @@ void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh)
         double z = rand() % OBJ_Z + 1;
 
         //球の時
-//        x = x - OBJ_X/2;
-//        y = y - OBJ_Y/2;
-//        z = z - OBJ_Z/2;
-//        if((OBJ_Z/2)*(OBJ_Z/2) < x*x + y*y + z*z)   continue;
+        if(input_set[4][1].toInt() == 2){
+            x = x - OBJ_X/2;
+            y = y - OBJ_Y/2;
+            z = z - OBJ_Z/2;
+            if((OBJ_Z/2)*(OBJ_Z/2) < x*x + y*y + z*z)   continue;
+        }
         //ここまで
         //円柱の時
-        x = x - OBJ_X/2;
-        y = y - OBJ_Y/2;
-        if((OBJ_X/2)*(OBJ_X/2) < x*x + y*y) continue;
+        if(input_set[4][1].toInt() == 3){
+            x = x - OBJ_X/2;
+            y = y - OBJ_Y/2;
+            if((OBJ_X/2)*(OBJ_X/2) < x*x + y*y) continue;
+        }
         //ここまで
 
         const dhVec4 pos(x, y, z, 0);

@@ -90,6 +90,7 @@ struct Parameter{
     vector<vector<QString>> color_def;
     vector<vector<QString>> area_to_bone;
     double coef;
+    vector<vector<QString>> input_set;
 };
 
 vector<double> Rot2Euler(const dhMath::dhMat33 Mat);

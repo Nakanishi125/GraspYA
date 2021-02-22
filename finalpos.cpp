@@ -78,7 +78,7 @@ double func_estimate(const gsl_vector *v,void *params){
                             + dp->par3*collision_eval(dp->arm, dp->bodyPoints, dp->objectPoints, dp->hand_size)
                             + dp->par4*forceClosure_eval(dp->arm, dp->ssd, dp->handMesh, dp->objMesh, dp->ObjPs_normal,
                                                          dp->MP, dp->color_def, dp->area_to_bone, dp->bodyPoints,
-                                                         dp->coef);
+                                                         dp->coef, dp->input_set);
 
     dp->bodyPoints->clearAllPoints();
     dp->objectPoints->clearAllPoints();
@@ -196,6 +196,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
     dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
     dhPointCloud* internal = dhnew<dhPointCloud>();
+    vector<vector<QString>> input_set;
     double hand_size;
 
     vector<vector<QString>> MP;
@@ -205,7 +206,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
 
     prepare_romeval(joints_list, joint_bone, DF, ashape_all, age);
     prepare_coordeval(Fp, ObjPs, ObjPs_normal, fpname);
-    prepare_colleval(arm, hand_size, internal, objMesh);
+    prepare_colleval(arm, hand_size, internal, objMesh, input_set);
     prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
 
 
@@ -268,7 +269,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
                     joints_list, joint_bone, DF, ashape_all,               //ROM
                     ObjPs, ObjPs_normal, fpname,                           //Coordinate
                     bodyPoints, objectPoints, internal, hand_size,         //Collision
-                    MP, color_def, area_to_bone, coef};                    //ForceClosure
+                    MP, color_def, area_to_bone, coef, input_set};                    //ForceClosure
 
     const gsl_multimin_fminimizer_type *T;      //必要ないろいろ宣言
     gsl_multimin_fminimizer *s = NULL;
@@ -315,7 +316,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
     DH_LOG("ROM evaluation is "+QString::number(rom_eval(arm, joints_list, joint_bone, DF, ashape_all)),0);
     DH_LOG("Coordinate evaluation is "+QString::number(coord_eval(Fp, ObjPs, ObjPs_normal, fpname)),0);
     DH_LOG("Collision evaluation is "+QString::number(collision_eval(arm, bodyPoints, objectPoints, hand_size)),0);
-    DH_LOG("ForceClosure evaluation is "+QString::number(forceClosure_eval(arm, ssd, handMesh, objMesh, ObjPs_normal,MP, color_def, area_to_bone, bodyPoints,coef)),0);
+    DH_LOG("ForceClosure evaluation is "+QString::number(forceClosure_eval(arm, ssd, handMesh, objMesh, ObjPs_normal,MP, color_def, area_to_bone, bodyPoints,coef, input_set)),0);
 
     DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
     DH_LOG("iter is"+QString::number(iter),0);
@@ -351,7 +352,7 @@ double func_estimate_PSO(const array<double,dimensions> para, Parameter pp){
                          + pp.par3*collision_eval(pp.arm, pp.bodyPoints, pp.objectPoints, pp.hand_size)
                          + pp.par4*forceClosure_eval(pp.arm, pp.ssd, pp.handMesh, pp.objMesh, pp.ObjPs_normal,
                                                      pp.MP, pp.color_def, pp.area_to_bone, pp.bodyPoints,
-                                                     pp.coef);
+                                                     pp.coef, pp.input_set);
 
     return estimate_func;
 }
