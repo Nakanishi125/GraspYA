@@ -10,11 +10,26 @@
 void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& color_def,
                           vector<vector<QString>>& area_to_bone,double& coef, int age)
 {
+    boost::property_tree::ptree pt;
+    read_ini("filepath.ini", pt);
 
-    QString mppath = "C:\\kenkyu\\ForceClosure\\csv\\MPdata0302.csv";
-    QString rstpath = "C:\\kenkyu\\MuscleRestrict\\strength_age.csv";
-//    QString parapath = "C:\\kenkyu\\ForceClosure\\csv\\max_muscle_force_0302_para.csv";
+    QString mppath;
+    if(boost::optional<QString> mppath_confirm = pt.get_optional<QString>("path.MP")){
+        mppath = mppath_confirm.get();
+    }
+    else{
+        mppath = "";
+        DH_LOG("MP is nothing",0);
+    }
 
+    QString rstpath;
+    if(boost::optional<QString> rstpath_confirm = pt.get_optional<QString>("path.strength_age")){
+        rstpath = rstpath_confirm.get();
+    }
+    else{
+        rstpath = "";
+        DH_LOG("strength_age is nothing",0);
+    }
 
 //MPdata0302.csvの読み込み==========================
     Csv csvmp(mppath);
@@ -32,7 +47,6 @@ void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& 
         return ;
     }
     MP_rst.erase(MP_rst.begin());
-
 //=================================================
 
 ////max_muscle_force_0302_para.csvの読み込み===========
@@ -47,8 +61,15 @@ void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& 
 ////=================================================
 
 //==ハンドモデルの領域の色情報取得======================================================
-    QString list = "C:\\kenkyu\\ForceClosure\\csv\\def_color_area.csv";
-    Csv obj(list);
+    QString color;
+    if(boost::optional<QString> color_confirm = pt.get_optional<QString>("path.def_color_area")){
+        color = color_confirm.get();
+    }
+    else{
+        color = "";
+        DH_LOG("def_color_area is nothing",0);
+    }
+    Csv obj(color);
     if(!obj.getCsv(color_def)){
         DH_LOG("failed to read the file",0);
         return ;
@@ -57,10 +78,17 @@ void prepare_forceClosure(vector<vector<QString>>& MP, vector<vector<QString>>& 
 //==============================================================================
 
 //==エリアとboneの対応付け情報取得=====================================================
-    QString atb = "C:\\kenkyu\\ForceClosure\\csv\\area_bone.csv";
+    QString atb;
+    if(boost::optional<QString> atb_confirm = pt.get_optional<QString>("path.area_bone")){
+        atb = atb_confirm.get();
+    }
+    else{
+        atb = "";
+        DH_LOG("area_bone is nothing",0);
+    }
     Csv obj_atb(atb);
     if(!obj_atb.getCsv(area_to_bone)){
-        DH_LOG("failed to read the file",0);
+        DH_LOG("failed to read area_bone.csv",0);
         return ;
     }
     area_to_bone.erase(area_to_bone.begin());

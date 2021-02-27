@@ -58,6 +58,7 @@ public slots:
     void saveArmInfo(dhArmature *arm, QString IFname);
     void saveArmInfoinMoCapSequence(dhArmature *arm, dhMoCapSequence *seq, QString OFname);
     void PlotGivenPointTrajectory(dhMoCapSequence *mocap, dhFeaturePoints *fp, QString FPName);
+    void PathSettings();
     void Extract_maxmin(QString in);
     double RoM_evaluation(dhArmature* arm, int age);
     double Coordinate_evaluation(dhFeaturePoints* Fp);

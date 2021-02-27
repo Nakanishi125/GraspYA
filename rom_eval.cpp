@@ -244,16 +244,25 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 
     double rst = cal_res(age);  //年齢に応じた制限率計算
 
+    boost::property_tree::ptree pt;
+    read_ini("filepath.ini", pt);
+
 // ===========================
 // joint_relation.csvの読み込み
 // ===========================
-
-    QString list = "C:\\kenkyu\\GraspYA\\data\\joint_relation.csv";
+    QString list;
+    if(boost::optional<QString> list_confirm = pt.get_optional<QString>("path.joint_relation")){
+        list = list_confirm.get();
+    }
+    else{
+        list = "";
+        DH_LOG("joint_relation is nothing",0);
+    }
 
     Csv objJL(list);
     if(!objJL.getCsv(joints_list)){
-        DH_LOG("failed to read the file",0);
-        return ;
+        DH_LOG("failed to read joint_relation.csv",0);
+        return;
     }
 
     joints_list.erase(joints_list.begin());		//先頭行削除
@@ -263,11 +272,18 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 // joint_bone.csvの読み込み
 // =======================
 
-    QString bone = "C:\\kenkyu\\GraspYA\\data\\joint_bone.csv";
+    QString bone;
+    if(boost::optional<QString> bone_confirm = pt.get_optional<QString>("path.joint_bone")){
+        bone = bone_confirm.get();
+    }
+    else{
+        bone = "";
+        DH_LOG("joint_bone is nothing",0);
+    }
 
     Csv objJB(bone);
     if(!objJB.getCsv(joint_bone)){
-        DH_LOG("failed to read the file",0);
+        DH_LOG("failed to read joint_bone.csv",0);
         return ;
     }
 
@@ -277,12 +293,19 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 // assembledActiveDF01_maxmin.csvの読み込み
 // =======================================
 
-    QString add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_health_maxmin.csv";
+    QString ActiveDF;
+    if(boost::optional<QString> ActiveDF_confirm = pt.get_optional<QString>("path.ActiveDF")){
+        ActiveDF = ActiveDF_confirm.get();
+    }
+    else{
+        ActiveDF = "";
+        DH_LOG("ActiveDF is nothing",0);
+    }
 
-    Csv objDF(add);
+    Csv objDF(ActiveDF);
     if(!objDF.getCsv(DF)){
-        DH_LOG("failed to read the file",0);
-        return ;
+        DH_LOG("failed to read assembledActiveDF01_maxmin.csv",0);
+        exit(0);
     }
 
     restrict_ROM(DF, rst);      //一次元ROMの制限
@@ -296,7 +319,16 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
         QString joint1 = joints_list[i][0];
         QString joint2 = joints_list[i][1];
 
-        QString ashape_frame = "C:\\kenkyu\\GraspYA\\ashape\\simple\\ashape_simple_";
+        QString ashape_frame;
+        if(boost::optional<QString> ashape_frame_confirm = pt.get_optional<QString>("path.ashape")){
+            ashape_frame = ashape_frame_confirm.get();
+        }
+        else{
+            ashape_frame = "";
+            DH_LOG("ashape_frame is nothing",0);
+        }
+
+        ashape_frame = ashape_frame + "\\ashape_simple_";
         QString extension = ".csv";
         QString ashape_file = ashape_frame + joint1 + '_' + joint2 + extension;
         vector<vector<QString>> ashape_string;
@@ -304,7 +336,7 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 
         Csv obj_ashape(ashape_file);
         if(!obj_ashape.getCsv(ashape_string)){
-            DH_LOG("failed to read the file5",0);
+            DH_LOG("failed to read some ashape files",0);
             return ;
         }
 

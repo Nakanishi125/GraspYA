@@ -4,9 +4,11 @@
 #include<sstream>
 #include<cstring>
 #include<QString>
-#include"csv.hpp"
-#include"dhMath.h"
-#include"dhFeaturePoint.h"
+
+#include "coordinate_eval.hpp"
+#include "csv.hpp"
+#include "dhMath.h"
+#include "dhFeaturePoint.h"
 
 using namespace std;
 
@@ -24,15 +26,24 @@ void prepare_coordeval(dhFeaturePoints* Fp,vector<vector<QString>>& ObjPs,
 
     fpname = Fp->allPointNames();
 
+    boost::property_tree::ptree pt;
+    read_ini("filepath.ini", pt);
 
 // ===========================
 // ObjectPoints3.csvの読み込み
 // ==========================
-    QString list = "C:\\kenkyu\\GraspYA\\data\\ObjectPoints3.csv";
+    QString OP;
+    if(boost::optional<QString> OP_confirm = pt.get_optional<QString>("path.ObjectPoints")){
+        OP = OP_confirm.get();
+    }
+    else{
+        OP = "";
+        DH_LOG("ObjectPoints is nothing",0);
+    }
 
-    Csv Obj(list);
+    Csv Obj(OP);
     if(!Obj.getCsv(ObjPs)){
-        cout << "cannot read" << endl;
+        cout << "cannot read ObjectPoints.csv" << endl;
         return ;
     }
 
@@ -50,11 +61,17 @@ void prepare_coordeval(dhFeaturePoints* Fp,vector<vector<QString>>& ObjPs,
 //==============================
 //ObjectNormalvecs3.csvの読み込み
 //==============================
-    QString list_normal = "C:\\kenkyu\\GraspYA\\data\\ObjectNormalvecs3.csv";
-
-    Csv Obj_normal(list_normal);
+    QString ON;
+    if(boost::optional<QString> ON_confirm = pt.get_optional<QString>("path.ObjectPoints")){
+        ON = ON_confirm.get();
+    }
+    else{
+        ON = "";
+        DH_LOG("ObjectNormal is nothing",0);
+    }
+    Csv Obj_normal(ON);
     if(!Obj_normal.getCsv(ObjPs_normal)){
-        cout << "cannot read" << endl;
+        cout << "cannot read ObjectNormal.csv" << endl;
         return ;
     }
 

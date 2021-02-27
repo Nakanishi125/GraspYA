@@ -23,10 +23,20 @@ void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal
 {
     string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\log_setting.txt";
     ofstream log(fn, ios::app);
+
+    boost::property_tree::ptree pt;
+    read_ini("filepath.ini", pt);
 //=============================
 // settings.csvの読み込み
 //=============================
-    QString setting = "C:\\kenkyu\\GraspYA\\data\\settings.csv";
+    QString setting;
+    if(boost::optional<QString> setting_confirm = pt.get_optional<QString>("path.settings")){
+        setting = setting_confirm.get();
+    }
+    else{
+        setting = "";
+        DH_LOG("settings is nothing",0);
+    }
 
     Csv Obj_set(setting);
     if(!Obj_set.getCsv(input_set)){

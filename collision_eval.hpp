@@ -7,6 +7,10 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl/impl/point_types.hpp>
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/optional.hpp>
+
 #include "dhApplication.h"
 #include "dhMath.h"
 #include "dhArmature.h"

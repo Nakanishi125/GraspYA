@@ -7,6 +7,11 @@
 #include<sstream>
 #include<cstring>
 #include<QString>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/optional.hpp>
+
 #include"csv.hpp"
 #include"dhMath.h"
 #include"dhFeaturePoint.h"

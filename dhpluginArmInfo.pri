@@ -15,7 +15,7 @@ INCLUDEPATH += "C:/Program Files/OpenNI2/Include"
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/3rdParty/Qhull/include"
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/3rdParty/VTK/include/vtk-8.0"
 
-INCLUDEPATH += "C:/GnuWin32/include"
+INCLUDEPATH += "C:/kenkyu/glpk-5.0/src"
 
 #LIBS += C:/lib64/glpk-4.55/w64/glpk_4_55.lib
 #LIBS += C:/lib64/PQP_v1.3/lib/PQPvs2015.lib
@@ -46,7 +46,7 @@ LIBS += "C:/Program Files/PCL 1.8.1/lib/pcl_surface_release.lib"
 #LIBS += "C:/Program Files/PCL 1.8.0/lib/pcl_visualization_release.lib"
 
 
-LIBS += "C:/Users/ynunakanishi/Desktop/glpk-5.0/w64/glpk.lib"
+LIBS += "C:/kenkyu/glpk-5.0/w64/glpk.lib"
 #LIBS += "C:/GnuWin32/lib/glpk-bcc.lib"
 
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-
+#include <map>
 
 #include <QtGui>
 #include <QInputDialog>
@@ -18,9 +18,11 @@
 //#include <gsl/gsl_blas.h>
 #include <gsl/gsl_multimin.h>
 
-
 #include <pcl/surface/convex_hull.h>
 #include <pcl/impl/point_types.hpp>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 
 #include "csv.hpp"
 #include "rom_eval.hpp"
@@ -29,7 +31,7 @@
 #include "finalpos.h"
 #include "dhcontact.h"
 #include "force_closure.hpp"
-#include <map>
+
 
 
 
@@ -156,6 +158,50 @@ void dhArmOpe::PlotGivenPointTrajectory(dhMoCapSequence *mocap, dhFeaturePoints 
         fpts->constructCache();
     }
 }
+
+void dhArmOpe::PathSettings()
+{
+    // ROM
+    QString joint_rel = QFileDialog::getOpenFileName(nullptr,"Choose joint_relation.csv","","csv(*.csv)");
+    QString joint_bone = QFileDialog::getOpenFileName(nullptr,"Choose joint_bone.csv","","csv(*.csv)");
+    QString ActiveDF = QFileDialog::getOpenFileName(nullptr,"Choose assembledActiveDF_maxmin.csv","","csv(*.csv)");
+    QString ashape = QFileDialog::getExistingDirectory(nullptr, "Choose the directory which contains ashape files", "", QFileDialog::ShowDirsOnly);
+
+    // Coordinate
+    QString OP = QFileDialog::getOpenFileName(nullptr,"Choose ObjectPoints3.csv","","csv(*.csv)");
+    QString ON = QFileDialog::getOpenFileName(nullptr,"Choose ObjectNormal3.csv","","csv(*.csv)");
+
+    // Collision
+    QString set = QFileDialog::getOpenFileName(nullptr,"Choose settings.csv","","csv(*.csv)");
+
+    // Force Closure
+    QString MP = QFileDialog::getOpenFileName(nullptr,"Choose MPdata.csv","","csv(*.csv)");
+    QString str_age = QFileDialog::getOpenFileName(nullptr,"Choose strength_age.csv","","csv(*.csv)");
+    QString def_col_area = QFileDialog::getOpenFileName(nullptr,"Choose def_color_area.csv","","csv(*.csv)");
+    QString area_bone = QFileDialog::getOpenFileName(nullptr,"Choose area_bone.csv","","csv(*.csv)");
+
+    boost::property_tree::ptree pt;
+
+    pt.put("path.joint_relation", joint_rel);
+    pt.put("path.joint_bone", joint_bone);
+    pt.put("path.ActiveDF", ActiveDF);
+    pt.put("path.ashape", ashape);
+
+    pt.put("path.ObjectPoints", OP);
+    pt.put("path.ObjectNomral", ON);
+
+    pt.put("path.settings", set);
+
+    pt.put("path.MP", MP);
+    pt.put("path.strength_age", str_age);
+    pt.put("path.def_color_area", def_col_area);
+    pt.put("path.area_bone", area_bone);
+
+    write_ini("filepath.ini", pt);
+    DH_LOG("Initial setting is complete.",0);
+}
+
+
 
 void dhArmOpe::Extract_maxmin(QString in){
 //莫大なデータ量のassembledActiveDF01.csvから必要な最大最小値を先に取り出しておく関数
@@ -322,7 +368,7 @@ QStringList dhArmOpe::ElementActionTitles()
 {
     QStringList sl=IDHElement::ElementActionTitles();
     sl<<"Get Bone Num"<<"Save Armature Info in File"<<"Save Armature Angle through MoCapSequence"
-     <<"Add Feature Point on the Body"<<"Extract max and min"<<"RoM evaluation"<<"Coordinate evaluation"
+     <<"Add Feature Point on the Body" <<"Path settings" <<"Extract max and min"<<"RoM evaluation"<<"Coordinate evaluation"
     <<"Collision evaluation"<<"FinalPostureCreate"<<"Force Closure";
     return sl;
 }
@@ -390,9 +436,15 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
 
     }
 
+    else if(cmd == "Path settings")
+    {
+        this->PathSettings();
+
+        return true;
+    }
+
     else if(cmd == "Extract max and min")
     {
-
         QString DF = QFileDialog::getOpenFileName(nullptr,"Input CSV file name","","csv(*.csv)");
         this->Extract_maxmin(DF);
 

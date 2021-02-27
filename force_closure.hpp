@@ -1,9 +1,14 @@
 #ifndef FORCE_CLOSURE_HPP
 #define FORCE_CLOSURE_HPP
 
-#include<vector>
-#include"dhMesh.h"
-#include"dhSkeletalSubspaceDeformation.h"
+#include <vector>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/optional.hpp>
+
+#include "dhMesh.h"
+#include "dhSkeletalSubspaceDeformation.h"
 
 
 void prepare_forceClosure(vector<vector<QString>>& MP,  vector<vector<QString>>& color_def,
