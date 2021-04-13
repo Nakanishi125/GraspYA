@@ -15,6 +15,8 @@ INCLUDEPATH += "C:/Program Files/OpenNI2/Include"
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/3rdParty/Qhull/include"
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/3rdParty/VTK/include/vtk-8.0"
 
+INCLUDEPATH += "C:/kenkyu/glpk-5.0/src"
+
 #LIBS += C:/lib64/glpk-4.55/w64/glpk_4_55.lib
 #LIBS += C:/lib64/PQP_v1.3/lib/PQPvs2015.lib
 
@@ -44,6 +46,10 @@ LIBS += "C:/Program Files/PCL 1.8.1/lib/pcl_surface_release.lib"
 #LIBS += "C:/Program Files/PCL 1.8.0/lib/pcl_visualization_release.lib"
 
 
+LIBS += "C:/kenkyu/glpk-5.0/w64/glpk.lib"
+#LIBS += "C:/GnuWin32/lib/glpk-bcc.lib"
+
+
 
 
 #コンパイルしたDLLを指定directoryにコピーしたい場合
@@ -54,23 +60,26 @@ HEADERS += ./dhcontact.h
 HEADERS += ./dhpluginArmInfo_global.h
 HEADERS += ./stdafx.h
 HEADERS += ./csv.hpp
+HEADERS += ./pgmlib.h
 HEADERS += ./Vector2D.hpp
 HEADERS += ./rom_eval.hpp
 HEADERS += ./coordinate_eval.hpp
 HEADERS += ./collision_eval.hpp
 HEADERS += ./finalpos.h
-HEADERS += ./segment.h
+HEADERS += ./force_closure.hpp
 
 
 SOURCES += ./dhpluginArmInfo.cpp
 SOURCES += ./dhcontact.cpp
 SOURCES += ./stdafx.cpp
 SOURCES += ./csv.cpp
+SOURCES += ./pgmlib.cpp
 SOURCES += ./rom_eval.cpp
 SOURCES += ./coordinate_eval.cpp
 SOURCES += ./collision_eval.cpp
 SOURCES += ./finalpos.cpp
-SOURCES += ./segment.cpp
+SOURCES += ./force_closure.cpp
+
 
 
 

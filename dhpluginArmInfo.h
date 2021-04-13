@@ -58,12 +58,15 @@ public slots:
     void saveArmInfo(dhArmature *arm, QString IFname);
     void saveArmInfoinMoCapSequence(dhArmature *arm, dhMoCapSequence *seq, QString OFname);
     void PlotGivenPointTrajectory(dhMoCapSequence *mocap, dhFeaturePoints *fp, QString FPName);
+    void PathSettings();
     void Extract_maxmin(QString in);
     double RoM_evaluation(dhArmature* arm, int age);
     double Coordinate_evaluation(dhFeaturePoints* Fp);
-    double Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
-    void FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp,
-                            dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age);
+    double Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh, dhArmature* arm);
+    double ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
+                                                           dhMesh* bodyMesh, dhMesh* objMesh, int age);
+    void FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
+                             dhMesh* handMesh, dhMesh* objMesh, int age);
 
     virtual const bool	IsValid(void)const{ return (1); }
     virtual void Update(void){}//何もしない設定

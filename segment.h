@@ -4,16 +4,16 @@
 #include<vector>
 #include"dhMath.h"
 
-class segment
-{
-public:
-    vector<dhVec3> ObjectPoints;
-    dhVec3 ObjectCoG;
-    dhVec3 ObjectNormal;
+//struct segment
+//{
+//    vector<int> BodyColor;
+//    vector<int> BodyPointsID;
+//    dhVec3 BodyCoG;
 
-    segment();
-    void getCoGs(segment* segm,vector<dhVec3>& cogs,int index,vector<int>& key);
+//    vector<dhVec3> ObjectPoints;
+//    dhVec3 ObjectCoG;
+//    dhVec3 ObjectNormal;
 
-};
+//};
 
 #endif // SEGMENT_H

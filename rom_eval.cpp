@@ -3,6 +3,8 @@
 #include<vector>
 #include<time.h>
 #include<sstream>
+#include<array>
+#include<string>
 #include<cmath>
 #include<cstring>
 #include"csv.hpp"
@@ -12,69 +14,255 @@
 #include"dhBone.h"
 
 #include"rom_eval.hpp"
+#include"pgmlib.h"
 #include"finalpos.h"
 
 using namespace std;
 
 double cal_res(int age){
     if(age>=30){
-        return -0.005*age + 1.15;   // y = -0.2/40 * (x-30) + 1.0 <=> y = -0.2/40*x + 1.15
+        return -0.10*(age-30)/40 + 1.0;   // y = -0.1/40 * (x-30) + 1.0
     }
     else{
         return 1.0;
     }
 }
 
-void rest_ashape(vector<alphashape>& ashape_all, double rst){
-    double avex,avey;
-    for(int i=0; i<ashape_all.size(); i++){
-        double sumx = 0;
-        double sumy = 0;
-        for(int j=0; j<ashape_all[i].vertices.size(); j++){
-            sumx += ashape_all[i].vertices[j].x;
-            sumy += ashape_all[i].vertices[j].y;
-        }
-        avex = sumx/ashape_all[i].vertices.size();
-        avey = sumy/ashape_all[i].vertices.size();
-        for(int j=0; j<ashape_all[i].vertices.size(); j++){
-            ashape_all[i].vertices[j].x -= avex;
-            ashape_all[i].vertices[j].y -= avey;
-            ashape_all[i].vertices[j].x *= rst;
-            ashape_all[i].vertices[j].y *= rst;
-            ashape_all[i].vertices[j].x += avex;
-            ashape_all[i].vertices[j].y += avey;
-        }
-
-//    //ここからデバッグ用
-//        QString p = "C:\\kenkyu\\tmp\\" + ashape_all[i].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\");
-//        QFile opfile(p);
-//        if(!opfile.open(QIODevice::WriteOnly)){
-//            DH_LOG("cannot open the output file",0);
-//        }
-
-//        QTextStream op(&opfile);
-//        for(int j=0; j<ashape_all[i].vertices.size(); j++){
-//            op << ashape_all[i].vertices[j].x << ',';
-//            op << ashape_all[i].vertices[j].y << '\n';
-//        }
+void restrict_ROM(vector<vector<QString>> &DF, double rst){     //一次元ROMの制限
+    for(size_t t=0; t<DF.size(); t++){
+        double ave,tmp1,tmp2;
+        ave = (DF[t][1].toDouble() + DF[t][2].toDouble())/2;
+        tmp1 = ave + (DF[t][1].toDouble() - ave) * rst;
+        tmp2 = ave + (DF[t][2].toDouble() - ave) * rst;
+        DF[t][1] = QString::number(tmp1);
+        DF[t][2] = QString::number(tmp2);
     }
 }
 
+void csv_to_pgm(vector<vector<int>> &conv, const vector<Vector2D> ashape,
+                    double minx, double miny, double maxx, double maxy)
+{
+    for(size_t i=0; i<ashape.size(); i++)
+    {
+        int pixx,pixy;
+        vector<int> buf;
+        pixx =(int)( ((WIDTH-1)-2*MARGIN) * (ashape[i].x-minx)/(maxx-minx)) + MARGIN;
+        pixy = ((HEIGHT-1)-MARGIN) - (int)( ((HEIGHT-1)-2*MARGIN) * (ashape[i].y-miny)/(maxy-miny));
+        buf.push_back(pixx);
+        buf.push_back(pixy);
+        conv.push_back(buf);
+        buf.clear();
+    }
+
+    // for(int i=0; i<ashape.size();i++){
+    //     for(int j=0; j<ashape[i].size(); j++){
+    //         std::cout << ashape[i][j] << ' ';
+    //     }
+    //     std::cout << std::endl;
+    // }
+}
+
+void pgm_to_csv(vector<array<int,2>> edge, vector<Vector2D> &csvize,
+                double minx, double miny, double maxx, double maxy, int split_csv)
+{
+    for(size_t i=0; i<edge.size()/split_csv; i++){      //PGMをCSVに
+        double csvx,csvy;
+        csvx = (maxx-minx)*(edge[split_csv*i][0] - MARGIN)/((WIDTH-1)-2*MARGIN) + minx;
+        csvy = (maxy-miny)*( (HEIGHT-1-MARGIN) - edge[split_csv*i][1])/((HEIGHT-1)-2*MARGIN) + miny;
+        Vector2D temporary(csvx,csvy);
+        csvize.push_back(temporary);
+    }
+    csvize.push_back(csvize[0]);
+}
+
+void ConnectingPoints(vector<vector<int>> conv, PGM *rom)
+{
+    for(size_t t=0; t<conv.size()-1; t++){
+        int dx,dy;
+        int signx = 1;
+        int signy = 1;
+        double gap;
+
+        dx = conv[t+1][0] - conv[t][0];
+        dy = conv[t+1][1] - conv[t][1];
+
+        if(dx == 0)
+        {
+            if(dy < 0){
+                dy = -dy;
+                signy = -1;
+            }
+            for(int i=0; i<=dy; i++){
+                rom->image[conv[t][0]][conv[t][1]+signy*i] = 0;
+            }
+        }
+        else
+        {
+            if(dx<0)
+            {
+                dx = -dx;
+                signx = -1;
+            }
+
+            gap = (double)dx/(rom->split);
+
+            for(int i=0; i<=(rom->split); i++){
+                double f;
+                int px,py;
+
+                f = (double)signx*dy*(i*signx*gap)/dx + conv[t][1];
+
+                px = (int)std::round(conv[t][0] + i*signx*gap);
+                py = (int)std::round(f);
+
+                rom->image[px][py] = 0;
+            }
+        }
+
+    }
+}
+
+
+vector<alphashape> restrict_ashape(vector<alphashape>& ashape_all, double rst)     //ashape ROMの制限
+{
+    vector<alphashape> ashape_rst_all;
+    for(size_t t=0; t<ashape_all.size(); t++)
+    {
+        double minx,maxx,miny,maxy,seedy;
+        minx = miny = DBL_MAX;
+        maxx = maxy = DBL_MIN;
+
+        for(size_t v=0; v<ashape_all[t].vertices.size(); v++){
+            if(minx > ashape_all[t].vertices[v].x){
+                minx = ashape_all[t].vertices[v].x;
+                seedy = ashape_all[t].vertices[v].y;
+            }
+            if(maxx < ashape_all[t].vertices[v].x)  maxx = ashape_all[t].vertices[v].x;
+            if(miny > ashape_all[t].vertices[v].y)  miny = ashape_all[t].vertices[v].y;
+            if(maxy < ashape_all[t].vertices[v].y)  maxy = ashape_all[t].vertices[v].y;
+        }
+
+        //BoundingBox中心からrst倍の制限をかける
+        vector<Vector2D> ashape_rst;
+        double cenx,ceny;
+        cenx = (minx+maxx)/2;
+        ceny = (miny+maxy)/2;
+        for(size_t i=0; i<ashape_all[t].vertices.size(); i++)
+        {
+            double rstx,rsty;
+            rstx = cenx + rst*(ashape_all[t].vertices[i].x - cenx);
+            rsty = ceny + rst*(ashape_all[t].vertices[i].y - ceny);
+            Vector2D tmpvec(rstx,rsty);
+            ashape_rst.push_back(tmpvec);
+        }
+
+        vector<vector<int>> conv;
+        vector<vector<int>> conv_rst;
+
+//        for(int i=0; i<ashape_all[t].vertices.size();i++){
+//            DH_LOG(QString::number(ashape_all[t].vertices[i].x)+","+QString::number(ashape_all[t].vertices[i].y),0);
+//        }
+
+        csv_to_pgm(conv, ashape_all[t].vertices, minx, miny, maxx, maxy);
+        csv_to_pgm(conv_rst,ashape_rst, minx, miny, maxx, maxy);
+
+        PGM *OrgROM = new PGM(255,WIDTH,HEIGHT);    //PGMオブジェクト生成
+        PGM *ResROM = new PGM(255,WIDTH,HEIGHT);
+
+        ConnectingPoints(conv, OrgROM);     //点群を線でつなぎ，
+        ConnectingPoints(conv_rst,ResROM);
+
+        OrgROM->fill_image(0);      //中身を塗りつぶす
+        ResROM->fill_image(0);
+
+//　確認するために，画像ファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
+//        PGM* OverWrap = new PGM(255,WIDTH,HEIGHT);
+//        for(int row=0; row<OverWrap->width; row++){
+//            for(int col=0; col<OverWrap->height; col++){
+//                if(OrgROM->image[row][col] == 0)    OverWrap->image[row][col] = 0;
+//                if(ResROM->image[row][col] == 0)    OverWrap->image[row][col] = 125;
+//            }
+//        }
+//        QString head = "C:\\kenkyu\\GraspYA\\ashape_rst\\pgm\\";
+//        QString middle = (ashape_all[t].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\")).remove(".csv");
+//        QString tail = ".pgm";
+//        QString path_pgm = head+middle+tail;
+//        OverWrap->save_image(path_pgm.toStdString());
+//        delete OverWrap;
+//ここまで
+
+        PGM *ANDROM = new PGM(255,WIDTH,HEIGHT);
+
+        for(int col=0; col<OrgROM->height; col++){
+            for(int row=0; row<OrgROM->width; row++){
+                if(OrgROM->image[row][col] == 0 && ResROM->image[row][col] == 0)
+                    ANDROM->image[row][col] = 0;
+            }
+        }
+
+        vector<array<int,2>> edge;
+        edge = ANDROM->edge_extract();
+
+        vector<Vector2D> csvize;    //この変数に再構成
+        int split_csv = edge.size()/vertex_number;
+
+        pgm_to_csv(edge, csvize, minx, miny, maxx, maxy, split_csv);
+
+
+//　確認するために，csvファイルへの出力を行う部分．通常時は遅くなるためコメントアウト
+//        QString top = "C:\\kenkyu\\GraspYA\\ashape_rst\\csv\\";
+//        QString bottom = ashape_all[t].path.remove("C:\\kenkyu\\GraspYA\\ashape\\simple\\");
+
+//        string csv_path = (top+bottom+".csv").toStdString();
+//        std::ofstream ofs(csv_path);
+
+//        for(size_t ii=0; ii<csvize.size(); ii++){   //制限ROM
+//            ofs << std::to_string(csvize[ii].x) << ',' << std::to_string(csvize[ii].y) << std::endl;
+//        }
+//        ofs << std::endl << std::endl;
+//        for(size_t jj=0; jj<ashape_all[t].vertices.size(); jj++){   //元ROM
+//            ofs << std::to_string(ashape_all[t].vertices[jj].x) << ',' << std::to_string(ashape_all[t].vertices[jj].y) << std::endl;
+//        }
+//ここまで
+
+
+        alphashape tmp;
+        tmp.path = ashape_all[t].path;
+        tmp.vertices = csvize;
+        ashape_rst_all.push_back(tmp);
+
+        delete OrgROM;
+        delete ResROM;
+        delete ANDROM;
+    }
+
+    return ashape_rst_all;
+}
+
 void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString>>& joint_bone,
-                     vector<vector<QString>>& DF, vector<alphashape>& ashape_all, int age){
+                     vector<vector<QString>>& DF, vector<alphashape>& ashape_rst_all, int age){
 
     double rst = cal_res(age);  //年齢に応じた制限率計算
+
+    boost::property_tree::ptree pt;
+    read_ini("filepath.ini", pt);
 
 // ===========================
 // joint_relation.csvの読み込み
 // ===========================
-
-    QString list = "C:\\kenkyu\\GraspYA\\data\\joint_relation.csv";
+    QString list;
+    if(boost::optional<QString> list_confirm = pt.get_optional<QString>("path.joint_relation")){
+        list = list_confirm.get();
+    }
+    else{
+        list = "";
+        DH_LOG("joint_relation is nothing",0);
+    }
 
     Csv objJL(list);
     if(!objJL.getCsv(joints_list)){
-        DH_LOG("failed to read the file",0);
-        return ;
+        DH_LOG("failed to read joint_relation.csv",0);
+        return;
     }
 
     joints_list.erase(joints_list.begin());		//先頭行削除
@@ -84,11 +272,18 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 // joint_bone.csvの読み込み
 // =======================
 
-    QString bone = "C:\\kenkyu\\GraspYA\\data\\joint_bone.csv";
+    QString bone;
+    if(boost::optional<QString> bone_confirm = pt.get_optional<QString>("path.joint_bone")){
+        bone = bone_confirm.get();
+    }
+    else{
+        bone = "";
+        DH_LOG("joint_bone is nothing",0);
+    }
 
     Csv objJB(bone);
     if(!objJB.getCsv(joint_bone)){
-        DH_LOG("failed to read the file",0);
+        DH_LOG("failed to read joint_bone.csv",0);
         return ;
     }
 
@@ -98,30 +293,42 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 // assembledActiveDF01_maxmin.csvの読み込み
 // =======================================
 
-    QString add = "C:\\kenkyu\\GraspYA\\data\\assembledActiveDF01_maxmin.csv";
+    QString ActiveDF;
+    if(boost::optional<QString> ActiveDF_confirm = pt.get_optional<QString>("path.ActiveDF")){
+        ActiveDF = ActiveDF_confirm.get();
+    }
+    else{
+        ActiveDF = "";
+        DH_LOG("ActiveDF is nothing",0);
+    }
 
-    Csv objDF(add);
+    Csv objDF(ActiveDF);
     if(!objDF.getCsv(DF)){
-        DH_LOG("failed to read the file",0);
-        return ;
+        DH_LOG("failed to read assembledActiveDF01_maxmin.csv",0);
+        exit(0);
     }
-    for(int t=0; t<DF.size(); t++){
-        double tmp1,tmp2;
-        tmp1 = DF[t][1].toDouble()*rst;
-        tmp2 = DF[t][2].toDouble()*rst;
-        DF[t][1] = QString::number(tmp1);
-        DF[t][2] = QString::number(tmp2);
-    }
+
+    restrict_ROM(DF, rst);      //一次元ROMの制限
+
 
 //==================================
 // ashapeの読み込み
 //==================================
-
+    vector<alphashape> ashape_all;
     for(int i=0; i<joints_list.size(); i++){
         QString joint1 = joints_list[i][0];
         QString joint2 = joints_list[i][1];
 
-        QString ashape_frame = "C:\\kenkyu\\GraspYA\\ashape\\simple\\ashape_simple_";
+        QString ashape_frame;
+        if(boost::optional<QString> ashape_frame_confirm = pt.get_optional<QString>("path.ashape")){
+            ashape_frame = ashape_frame_confirm.get();
+        }
+        else{
+            ashape_frame = "";
+            DH_LOG("ashape_frame is nothing",0);
+        }
+
+        ashape_frame = ashape_frame + "\\ashape_simple_";
         QString extension = ".csv";
         QString ashape_file = ashape_frame + joint1 + '_' + joint2 + extension;
         vector<vector<QString>> ashape_string;
@@ -129,7 +336,7 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
 
         Csv obj_ashape(ashape_file);
         if(!obj_ashape.getCsv(ashape_string)){
-            DH_LOG("failed to read the file5",0);
+            DH_LOG("failed to read some ashape files",0);
             return ;
         }
 
@@ -144,7 +351,8 @@ void prepare_romeval(vector<vector<QString>>& joints_list, vector<vector<QString
         tmp.vertices = vertex;
         ashape_all.push_back(tmp);
     }
-    rest_ashape(ashape_all,rst);
+
+    ashape_rst_all = restrict_ashape(ashape_all,rst);    //ashape ROMの制限
 }
 
 
@@ -176,7 +384,7 @@ double calc_distance(vector<Vector2D> xy, Vector2D pos_pos){
 		}
 		else if(max.x < position_H.x){
             pos_to_edge_length = sqrt( (max.x-pos_pos.x)*(max.x-pos_pos.x) + (max.y-pos_pos.y)*(max.y-pos_pos.y) );
-			flag = 1;;
+            flag = 1;
         }
 		else if(min.x > position_H.x){
 			pos_to_edge_length = (min - pos_pos).norm();
@@ -199,14 +407,14 @@ double calc_distance(vector<Vector2D> xy, Vector2D pos_pos){
 
 
 void in_or_out(vector<Vector2D> xy, Vector2D pos_pos,int& inside_num,int& in_out){
-	for(int l1=0; l1<xy.size()-2; l1++){
+    for(int l1=0; l1<=xy.size()-2; l1++){
 		int l2 = l1 + 1;
 
         Vector2D position_edge1 = xy[l1];
         Vector2D position_edge2 = xy[l2];
 
 //============================
-//Crossing Number Algorithm
+// Crossing Number Algorithm
 //============================
 
 		if(position_edge1.x != position_edge2.x){
@@ -328,7 +536,7 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
 
         Vector2D position_pos(rot1,rot2);   //joints_listによって定められた関節の組み合わせに応じて
                                             //現在の関節角度組み合わせを定義する．
-
+//        DH_LOG(QString::number(rot1)+","+QString::number(rot2),0);
 
         vector<Vector2D> ashape;    //ashapeを構成する頂点データ
         for(int a=0; a<ashape_all.size(); a++){
@@ -337,6 +545,10 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
                 ashape = ashape_all[a].vertices;
             }
         }
+//        for(int i=0 ;i<ashape.size();i++){
+//            DH_LOG(QString::number(ashape[i][0])+","+QString::number(ashape[i][1]),0);
+//        }
+
 
         double min_pos_to_edge_length;
 
@@ -349,6 +561,7 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
 
 		if(in_out != 0 && inside_num % 2 == 0){
 			in_out = 0;
+//            DH_LOG("Outside ROM",0);
 		}
 
         double min_length;
@@ -364,9 +577,12 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
 				min_length = 0;
 			}
 		}
+//        DH_LOG(joints_list[i][0]+","+joints_list[i][1]+":"+QString::number(min_length),0);
+//        DH_LOG("   ",0);
 
 		min_length_sum += min_length * min_length;
 	}
+
 
 #pragma omp for default(private) reduction(+:min_length_sum)
     for(int col=0; col<joint_bone.size(); col++){
@@ -408,11 +624,12 @@ double rom_eval(dhArmature* arm, vector<vector<QString>> joints_list,
                 min_length = 0.0;
             }
         }
+//        DH_LOG(joint_bone[col][0]+":"+QString::number(min_length),0);
 
 		min_length_sum += min_length * min_length;
 	} 
 
-    double Rom_eval = min_length_sum/(30+25);
+    double Rom_eval = min_length_sum/(joints_list.size() + joint_bone.size());
 
     return Rom_eval;
 }

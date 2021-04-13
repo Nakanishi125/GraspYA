@@ -7,6 +7,10 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl/impl/point_types.hpp>
 
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/optional.hpp>
+
 #include "dhApplication.h"
 #include "dhMath.h"
 #include "dhArmature.h"
@@ -14,9 +18,18 @@
 #include "dhFeaturePoint.h"
 #include "dhSkeletalSubspaceDeformation.h"
 #include "dhcontact.h"
-#include "segment.h"
 
-double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm);
+
+void prepare_colleval(dhArmature* arm, double &size, dhPointCloud* internal, dhMesh* objMesh,
+                      vector<vector<QString>> &input_set);
+
+void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh, vector<vector<QString>> input_set);
+
+void extract_contactPoints(dhSkeletalSubspaceDeformation* ssd, dhPointCloud* pts,
+                           dhPointCloudAsVertexRef* &bodyPoints, dhPointCloudAsVertexRef* &objectPoints);
+
+double collision_eval(dhArmature* arm, dhPointCloudAsVertexRef* &bodyPoints,
+                      dhPointCloudAsVertexRef* &objectPoints, double hand_size);
 
 double hand_length(dhArmature* arm);
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-
+#include <map>
 
 #include <QtGui>
 #include <QInputDialog>
@@ -18,9 +18,11 @@
 //#include <gsl/gsl_blas.h>
 #include <gsl/gsl_multimin.h>
 
-
 #include <pcl/surface/convex_hull.h>
 #include <pcl/impl/point_types.hpp>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 
 #include "csv.hpp"
 #include "rom_eval.hpp"
@@ -28,8 +30,8 @@
 #include "collision_eval.hpp"
 #include "finalpos.h"
 #include "dhcontact.h"
-#include "segment.h"
-#include <map>
+#include "force_closure.hpp"
+
 
 
 
@@ -157,6 +159,50 @@ void dhArmOpe::PlotGivenPointTrajectory(dhMoCapSequence *mocap, dhFeaturePoints 
     }
 }
 
+void dhArmOpe::PathSettings()
+{
+    // ROM
+    QString joint_rel = QFileDialog::getOpenFileName(nullptr,"Choose joint_relation.csv","","csv(*.csv)");
+    QString joint_bone = QFileDialog::getOpenFileName(nullptr,"Choose joint_bone.csv","","csv(*.csv)");
+    QString ActiveDF = QFileDialog::getOpenFileName(nullptr,"Choose assembledActiveDF_maxmin.csv","","csv(*.csv)");
+    QString ashape = QFileDialog::getExistingDirectory(nullptr, "Choose the directory which contains ashape files", "", QFileDialog::ShowDirsOnly);
+
+    // Coordinate
+    QString OP = QFileDialog::getOpenFileName(nullptr,"Choose ObjectPoints3.csv","","csv(*.csv)");
+    QString ON = QFileDialog::getOpenFileName(nullptr,"Choose ObjectNormal3.csv","","csv(*.csv)");
+
+    // Collision
+    QString set = QFileDialog::getOpenFileName(nullptr,"Choose settings.csv","","csv(*.csv)");
+
+    // Force Closure
+    QString MP = QFileDialog::getOpenFileName(nullptr,"Choose MPdata.csv","","csv(*.csv)");
+    QString str_age = QFileDialog::getOpenFileName(nullptr,"Choose strength_age.csv","","csv(*.csv)");
+    QString def_col_area = QFileDialog::getOpenFileName(nullptr,"Choose def_color_area.csv","","csv(*.csv)");
+    QString area_bone = QFileDialog::getOpenFileName(nullptr,"Choose area_bone.csv","","csv(*.csv)");
+
+    boost::property_tree::ptree pt;
+
+    pt.put("path.joint_relation", joint_rel);
+    pt.put("path.joint_bone", joint_bone);
+    pt.put("path.ActiveDF", ActiveDF);
+    pt.put("path.ashape", ashape);
+
+    pt.put("path.ObjectPoints", OP);
+    pt.put("path.ObjectNomral", ON);
+
+    pt.put("path.settings", set);
+
+    pt.put("path.MP", MP);
+    pt.put("path.strength_age", str_age);
+    pt.put("path.def_color_area", def_col_area);
+    pt.put("path.area_bone", area_bone);
+
+    write_ini("filepath.ini", pt);
+    DH_LOG("Initial setting is complete.",0);
+}
+
+
+
 void dhArmOpe::Extract_maxmin(QString in){
 //莫大なデータ量のassembledActiveDF01.csvから必要な最大最小値を先に取り出しておく関数
 
@@ -232,27 +278,98 @@ double dhArmOpe::RoM_evaluation(dhArmature* arm, int age)
 
 double dhArmOpe::Coordinate_evaluation(dhFeaturePoints* fp)
 {
-    return coord_eval(fp);
+    vector<vector<QString>> ObjPs;
+    vector<vector<QString>> ObjPs_normal;
+    QStringList fpname;
+
+    prepare_coordeval(fp, ObjPs, ObjPs_normal, fpname);
+
+    return coord_eval(fp, ObjPs, ObjPs_normal, fpname);
 }
 
-double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm)
+double dhArmOpe::Collision_evaluation(dhSkeletalSubspaceDeformation* ssd, dhMesh* objMesh, dhArmature* arm)
 {
-    return collision_eval(mesh1,mesh2,arm);
+    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
+    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
+    dhPointCloud* internal = dhnew<dhPointCloud>();
+    vector<vector<QString>> input_set;
+    double hand_size;
+
+    prepare_colleval(arm, hand_size, internal, objMesh, input_set);
+    extract_contactPoints(ssd, internal, bodyPoints, objectPoints);
+
+    double eval = collision_eval(arm, bodyPoints, objectPoints, hand_size);
+//    dhdelete(bodyPoints);
+    dhdelete(objectPoints);
+    dhdelete(internal);
+
+    return eval;
 }
 
-void dhArmOpe::FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp,
-                                  dhSkeletalSubspaceDeformation* mesh1,dhMesh* mesh2, int age)
+double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
+                                         dhMesh* bodyMesh, dhMesh* objMesh, int age)
 {
-    FinalPostureCreate(arm,Fp,mesh1,mesh2, age);
-//    FinalPostureCreate_PSO(arm, Fp, mesh1, mesh2, age);
+    vector<vector<QString>> ObjPs_normal;
+    vector<vector<QString>> input_set;
+    vector<vector<QString>> MP;
+    vector<vector<QString>> color_def;
+    vector<vector<QString>> area_to_bone;
+
+    double coef;
+    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
+    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
+    dhPointCloud* internal = dhnew<dhPointCloud>();
+
+//==============================
+//ObjectNormalvecs3.csvの読み込み
+//==============================
+    QString list_normal = "C:\\kenkyu\\GraspYA\\data\\ObjectNormalvecs3.csv";
+
+    Csv Obj_normal(list_normal);
+    if(!Obj_normal.getCsv(ObjPs_normal)){
+        cout << "cannot read" << endl;
+        return 0;
+    }
+
+//=============================
+// settings.csvの読み込み
+//=============================
+    QString setting = "C:\\kenkyu\\GraspYA\\data\\settings.csv";
+
+    Csv Obj_set(setting);
+    if(!Obj_set.getCsv(input_set)){
+        DH_LOG("cannot read settings.csv",0);
+        return 0;
+    }
+
+
+    ObjPs_normal.erase(ObjPs_normal.begin());
+    generate_points_inobject(internal, objMesh, input_set);
+    prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
+    extract_contactPoints(bodySSD, internal, bodyPoints, objectPoints);
+
+    double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, ObjPs_normal, MP,
+                                    color_def, area_to_bone, bodyPoints, coef, input_set);
+    dhdelete(bodyPoints);
+    dhdelete(objectPoints);
+    dhdelete(internal);
+
+    return eval;
+}
+
+void dhArmOpe::FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
+                                   dhMesh* handMesh, dhMesh* objMesh, int age)
+{
+    FinalPostureCreate(arm, Fp, ssd, handMesh, objMesh, age);
+//    FinalPostureCreate_PSO(arm, Fp, ssd, handMesh, objMesh, age);
 }
 
 QStringList dhArmOpe::ElementActionTitles()
 {
     QStringList sl=IDHElement::ElementActionTitles();
     sl<<"Get Bone Num"<<"Save Armature Info in File"<<"Save Armature Angle through MoCapSequence"
-     <<"Add Feature Point on the Body"<<"Extract max and min"<<"RoM evaluation"<<"Coordinate evaluation"
-    <<"Collision evaluation"<<"FinalPostureCreate";
+     <<"Add Feature Point on the Body" <<"Path settings" <<"Extract max and min"<<"RoM evaluation"<<"Coordinate evaluation"
+    <<"Collision evaluation"<<"FinalPostureCreate"<<"Force Closure";
     return sl;
 }
 
@@ -319,20 +436,28 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
 
     }
 
-    else if(cmd == "Extract max and min"){
+    else if(cmd == "Path settings")
+    {
+        this->PathSettings();
 
+        return true;
+    }
+
+    else if(cmd == "Extract max and min")
+    {
         QString DF = QFileDialog::getOpenFileName(nullptr,"Input CSV file name","","csv(*.csv)");
         this->Extract_maxmin(DF);
 
         return true;
     }
 
-    else if(cmd == "RoM evaluation"){
-
+    else if(cmd == "RoM evaluation")
+    {
         bool isOK,ok;
         IDHElement* e=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
         if(isOK){
             dhArmature* arm = dynamic_cast<dhArmature*>(e);
+
             int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
                                              tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
 
@@ -353,7 +478,8 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         return true;
     }
 
-    else if(cmd == "Coordinate evaluation"){
+    else if(cmd == "Coordinate evaluation")
+    {
         bool isOK;
         IDHElement* e=dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK);
 
@@ -375,7 +501,8 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         return true;
     }
 
-    else if(cmd == "Collision evaluation"){
+    else if(cmd == "Collision evaluation")
+    {
         bool isOK,isOK2,isOK3;
 
         IDHElement* e1 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK);
@@ -407,10 +534,44 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
         return true;
     }
 
-    else if(cmd == "FinalPostureCreate"){
+    else if(cmd == "Force Closure")
+    {
+        bool isOK,isOK2,isOK3,isOK4, ok;
+
+        IDHElement* e1 = dhApp::elementSelectionDialog(dhArmature::type,&isOK);
+        if(isOK){
+            dhArmature* arm = dynamic_cast<dhArmature*>(e1);
+
+            IDHElement* e2 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK2);
+            if(isOK2){
+                dhSkeletalSubspaceDeformation* ssd = dynamic_cast<dhSkeletalSubspaceDeformation*>(e2);
+
+                IDHElement* e3 = dhApp::elementSelectionDialog(dhMesh::type,&isOK3);
+                if(isOK3){
+                    dhMesh* bodyMesh = dynamic_cast<dhMesh*>(e3);
+
+                    IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK4);
+                    if(isOK4){
+                        dhMesh* objMesh = dynamic_cast<dhMesh*>(e4);
+
+                        int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
+                                                         tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+
+                        if(ok){
+                            double fceval = this->ForceClosure_evaluation(arm, ssd, bodyMesh, objMesh, age);
+                        }
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    else if(cmd == "FinalPostureCreate")
+    {
         clock_t time1,time2;
         time1 = clock();
-        bool isOK,isOK2,isOK3,isOK4,ok;
+        bool isOK,isOK2,isOK3,isOK4,isOK5,ok;
         IDHElement* e1=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
         if(isOK){
             dhArmature* arm = dynamic_cast<dhArmature*>(e1);
@@ -421,20 +582,25 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
 
                 IDHElement* e3 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK3);
                 if(isOK3){
-                    dhSkeletalSubspaceDeformation* mesh1 = dynamic_cast<dhSkeletalSubspaceDeformation*>(e3);
+                    dhSkeletalSubspaceDeformation* ssd = dynamic_cast<dhSkeletalSubspaceDeformation*>(e3);
 
-                    IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK);
+                    IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK4);
                     if(isOK4){
-                        dhMesh* mesh2 = dynamic_cast<dhMesh*>(e4);
+                        dhMesh* handMesh = dynamic_cast<dhMesh*>(e4);
 
-                        int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
-                                                         tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
-                        if(ok){
-                            this->FinalPosture_create(arm,Fp,mesh1,mesh2,age);
+                        IDHElement* e5 = dhApp::elementSelectionDialog(dhMesh::type,&isOK5);
+                        if(isOK5){
+                            dhMesh* objMesh = dynamic_cast<dhMesh*>(e5);
 
-                            time2 = clock();
-                            double etime = (double)(time2-time1)/1000;
-                            DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                            int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
+                                                             tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+                            if(ok){
+                                this->FinalPosture_create(arm, Fp, ssd, handMesh, objMesh, age);
+
+                                time2 = clock();
+                                double etime = (double)(time2-time1)/1000;
+                                DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                            }
                         }
                     }
                 }

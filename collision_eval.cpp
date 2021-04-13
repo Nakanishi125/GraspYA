@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <time.h>
 
 #include <pcl/surface/convex_hull.h>
 #include <pcl/impl/point_types.hpp>
@@ -11,14 +12,108 @@
 #include "dhFeaturePoint.h"
 #include "dhSkeletalSubspaceDeformation.h"
 #include "dhcontact.h"
-#include "segment.h"
 #include "collision_eval.hpp"
+#include "csv.hpp"
 
 
 using namespace std;
 
+void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal, dhMesh* objMesh,
+                      vector<vector<QString>> &input_set)
+{
+    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\log_setting.txt";
+    ofstream log(fn, ios::app);
 
-double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArmature* arm){
+    boost::property_tree::ptree pt;
+    read_ini("filepath.ini", pt);
+//=============================
+// settings.csvの読み込み
+//=============================
+    QString setting;
+    if(boost::optional<QString> setting_confirm = pt.get_optional<QString>("path.settings")){
+        setting = setting_confirm.get();
+    }
+    else{
+        setting = "";
+        DH_LOG("settings is nothing",0);
+    }
+
+    Csv Obj_set(setting);
+    if(!Obj_set.getCsv(input_set)){
+        DH_LOG("cannot read settings.csv",0);
+        return ;
+    }
+    for(int i=0; i<input_set.size(); i++){
+        for(int j=0; j<input_set[i].size(); j++){
+            log << input_set[i][j] << endl;
+        }
+    }
+
+    hand_size = hand_length(arm);
+    generate_points_inobject(internal, objMesh, input_set);
+}
+
+
+
+void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh, vector<vector<QString>> input_set)
+{
+
+    const int OBJ_X = input_set[2][1].toDouble();
+    const int OBJ_Y = input_set[2][2].toDouble();
+    const int OBJ_Z = input_set[2][3].toDouble();
+
+    const int Number_of_Pts = 5000;
+
+    srand((unsigned int)clock());
+    int i=0;
+    while(internal->pts.size() < Number_of_Pts){
+        double x = rand() % OBJ_X + 1;
+        double y = rand() % OBJ_Y + 1;
+        double z = rand() % OBJ_Z + 1;
+
+        //球の時
+        if(input_set[4][1].toInt() == 2){
+            x = x - OBJ_X/2;
+            y = y - OBJ_Y/2;
+            z = z - OBJ_Z/2;
+            if((OBJ_Z/2)*(OBJ_Z/2) < x*x + y*y + z*z)   continue;
+        }
+        //ここまで
+        //円柱の時
+        if(input_set[4][1].toInt() == 3){
+            x = x - OBJ_X/2;
+            y = y - OBJ_Y/2;
+            if((OBJ_X/2)*(OBJ_X/2) < x*x + y*y) continue;
+        }
+        //ここまで
+
+        const dhVec4 pos(x, y, z, 0);
+
+        dhPointAsIndependent pt;
+
+        internal->pts << pt;
+        internal->setPosition(internal->pts[i], pos);
+        ++i;
+    }
+
+    internal->mergePoints(objMesh);     //物体内部に生成した点群と物体表面点群をマージする
+
+}
+
+
+
+
+//先に接触点群を抽出しておく関数
+void extract_contactPoints(dhSkeletalSubspaceDeformation* ssd, dhPointCloud* internal,
+                           dhPointCloudAsVertexRef* &bodyPoints, dhPointCloudAsVertexRef* &objectPoints)
+{
+    computeContactRegion(bodyPoints, objectPoints, ssd, internal);
+}
+
+
+
+double collision_eval(dhArmature* arm, dhPointCloudAsVertexRef* &bodyPoints,
+                      dhPointCloudAsVertexRef* &objectPoints, double hand_size){
 
     map<int,string> bone_index;
     bone_index[0] = "ROOT";     bone_index[1] = "CP";       bone_index[2] = "TMCP";
@@ -29,33 +124,28 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     bone_index[15] = "RMP";     bone_index[16] = "RDP";     bone_index[17] = "PMCP";
     bone_index[18] = "PPP";     bone_index[19] = "PMP";     bone_index[20] = "PDP";
 
-    double size = hand_length(arm);
 
-//    DH_LOG("mesh1 is "+QString::number(mesh1->PointCount()),0);
-//    DH_LOG("mesh2 is "+QString::number(mesh2->PointCount()),0);
-
-    dhPointCloudAsVertexRef* bodyPoints = dhnew<dhPointCloudAsVertexRef>();
-    dhPointCloudAsVertexRef* objectPoints = dhnew<dhPointCloudAsVertexRef>();
-
-    computeContactRegion(bodyPoints,objectPoints,mesh1,mesh2);
-
-    dhBone* root;
-    root = dhnew<dhBone>();
+    dhBone* link;
+    link = dhnew<dhBone>();
     vector<QString> bones;
     vector<int>     depths;
-    getArmatureStructure(arm,bones,depths,root);
+    getArmatureStructure(arm, link, bones, depths);
 
-    segment* points_obj;
-    points_obj = new segment[bones.size()];
-    vector<dhVec3> cog_obj;
-    vector<int> keys_obj;
+//    segment* points_obj;
+//    points_obj = new segment[bones.size()];
+//    vector<dhVec3> cog_obj;
+//    vector<int> keys_obj;
 
-    segmentObjectPoints(objectPoints,points_obj,arm,bones);
+//    segmentObjectPoints(objectPoints,points_obj,arm,bones);     //objectPointsをsegment[最短bone]に所属させる
 
-    for(int index=0; index<bones.size(); index++){      //getCoGsに相当
-        points_obj[index].getCoGs(points_obj,cog_obj,index,keys_obj);
-    }
-
+//    for(int index=0; index<bones.size(); index++){
+//        if(points_obj[index].ObjectPoints.empty()){;    //==true削除
+//        }
+//        else{
+//            cog_obj.push_back(points_obj[index].ObjectCoG);
+//            keys_obj.push_back(index);
+//        }
+//    }
 
 //        for(int k=0; k<cog_obj.size(); k++){          // CoGとそのbone名を出力(物体側)
 //            dhVec3 tmp = cog_obj[k];
@@ -71,10 +161,15 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
     vector<dhVec3> cog_hand;
     vector<int> keys_hand;
 
-    segmentObjectPoints(bodyPoints,points_hand,arm,bones);
+    segmentObjectPoints(bodyPoints, points_hand, arm, bones);
 
-    for(int index=0; index<bones.size(); index++){      //getCoGsに相当
-        points_hand[index].getCoGs(points_hand,cog_hand,index,keys_hand);
+    for(int index=0; index<bones.size(); index++){
+        if(points_hand[index].ObjectPoints.empty()){;
+        }
+        else{
+            cog_hand.push_back(points_hand[index].ObjectCoG);
+            keys_hand.push_back(index);
+        }
     }
 
 //    for(int k=0; k<cog_hand.size(); k++){         // CoGとそのbone名を出力(ハンドモデル側)
@@ -98,44 +193,69 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
             keys_hand.erase(keys_hand.begin() + inc);
             cog_hand.erase(cog_hand.begin() + inc);
 
-//                for(int b =0; b<keys_hand.size(); b++){       //削除したbone_numと削除後に残ったkeys_handの確認
-//                    DH_LOG(QString::number(bone_num)+" "+QString::number(keys_hand[b]),0);
-//                }
+//            for(int b =0; b<keys_hand.size(); b++){       //削除したbone_numと削除後に残ったkeys_handの確認
+//                DH_LOG(QString::number(bone_num)+" "+QString::number(keys_hand[b]),0);
+//            }
 
         }
     }
 
-
-    //ハンドモデルについて，干渉点から物体表面までの距離が10mm未満の場合にはその点を除外する
     vector<vector<dhVec3>> points_hand2;
 
     for(int i=0; i<keys_hand.size(); i++){
-        double min_length;
-        int sub2 = 0;
-        vector<dhVec3> points = points_hand[keys_hand[i]].ObjectPoints;
-        for(int j=0; j<points.size(); j++){
-            dhVec3 point = points[j];
-            for(int k=0; k<keys_obj.size(); k++){
-                vector<dhVec3> obj_vecs = points_obj[keys_obj[k]].ObjectPoints;
-                for(int l=0; l<obj_vecs.size(); l++){
-                    dhVec3 obj_vec = obj_vecs[l];
-                    double length = (obj_vec - point).norm();
-                    if(l == 0 && k == 0){     min_length = length;}
-                    else{
-                        if(min_length > length){
-                            min_length = length;
-                        }
-                    }
-                }
-            }
-
-            if(min_length < 5){
-                int inc = j - sub2++;
-                points.erase(points.begin() + inc);
-            }
-        }
-        points_hand2.push_back(points);
+        vector<dhVec3> seg_pts = points_hand[keys_hand[i]].ObjectPoints;
+        points_hand2.push_back(seg_pts);
     }
+
+
+
+//ハンドモデルについて，干渉点から物体表面までの距離が5mm未満の場合にはその点を除外する  ->　dhCollisionDetection関数で考慮済
+//    vector<dhVec3> opoints;
+//    getPointsFromCloud(objectPoints, opoints);
+//    for(int i=0; i<keys_hand.size(); i++){
+//        vector<dhVec3> hpoints = points_hand[keys_hand[i]].ObjectPoints;
+//        for(int j=0; j<hpoints.size(); j++){
+//            double min_length = DBL_MAX;
+//            dhVec3 hpoint = hpoints[j];
+//            for(int k=0; k<opoints.size(); k++){
+//                dhVec3 opoint = opoints[k];
+//                double length = (opoint - hpoint).norm();
+
+//                if(min_length > length){
+//                    min_length = length;
+//                }
+//            }
+
+//        }
+//    }
+
+
+
+//    for(int i=0; i<keys_hand.size(); i++){     //O^4　->アルゴリズムチェンジ必要，そもそもミスってる
+//        int sub2 = 0;
+//        vector<dhVec3> points = points_hand[keys_hand[i]].ObjectPoints;
+//        for(int j=0; j<points.size(); j++){
+//            double min_length = DBL_MAX;
+//            dhVec3 point = points[j];
+//            for(int k=0; k<keys_obj.size(); k++){
+//                vector<dhVec3> obj_vecs = points_obj[keys_obj[k]].ObjectPoints;
+//                for(int l=0; l<obj_vecs.size(); l++){
+//                    dhVec3 obj_vec = obj_vecs[l];
+//                    double length = (obj_vec - point).norm();
+//                    DH_LOG("length is "+QString::number(length),0);
+//                    if(min_length > length){
+//                        min_length = length;
+//                    }
+
+//                }
+//            }
+//            if(min_length > 10){
+//                int inc = j - sub2++;
+//                points.erase(points.begin() + inc);
+//            }
+//        }
+//        points_hand2.push_back(points);
+//    }
 
 //    for(int cnt=0; cnt<points_hand2.size(); cnt++){       //points_hand2の中身チェック
 //        DH_LOG("bone is "+QString::fromStdString(bone_index[keys_hand[cnt]]),0);
@@ -185,19 +305,17 @@ double collision_eval(dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2, dhArm
         Volume += CHull->getTotalVolume();
     }
 
-    delete[] points_obj;
+//    delete[] points_obj;
     delete[] points_hand;
 
+    dhdelete(link);
 
-    dhdelete(root);
+//    dhdelete(bodyPoints);
+//    dhdelete(objectPoints);
 
-    dhdelete(bodyPoints);
-    dhdelete(objectPoints);
+//    DH_LOG(QString::number(Volume),0);
 
-    DH_LOG(QString::number(Volume),0);
-
-    return Volume/(size*size*size);
-//    return Volume/(551.99*551.99*551.99);
+    return Volume/(hand_size*hand_size*hand_size);
 
 }
 
