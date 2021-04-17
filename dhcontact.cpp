@@ -194,7 +194,7 @@ void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints, segment* segm, d
 
 //areaに所属するsegmentのメンバ変数を埋める
 void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
-                              dhSkeletalSubspaceDeformation* bodySSD, dhMesh* bodyMesh,
+                              dhSkeletalSubspaceDeformation* bodySSD,
                               dhMesh* objMesh, vector<vector<QString>> color_def, segment* segm){
 
 
@@ -207,9 +207,9 @@ void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
     for(int i=0; i<contactPoints->PointCount(); i++){           //全接触点を適切な領域に所属させていく
         int PointID = contactPoints->refID(i);                      //以降，メンバ変数BodyPointsへの代入
 
-        dhVec3 point_color(bodyMesh->Vi(PointID)->color(0),         //頂点が接触しているbodyMeshの色を抽出する
-                           bodyMesh->Vi(PointID)->color(1),
-                           bodyMesh->Vi(PointID)->color(2));        
+        dhVec3 point_color(bodySSD->Vi(PointID)->color(0),         //頂点が接触しているbodyMeshの色を抽出する
+                           bodySSD->Vi(PointID)->color(1),
+                           bodySSD->Vi(PointID)->color(2));
 
         int flag = 0;
         for(int area=0; area<color_def.size(); area++){

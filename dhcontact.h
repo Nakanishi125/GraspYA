@@ -48,7 +48,7 @@ void segmentObjectPoints(dhPointCloudAsVertexRef* objectPoints,segment* segm,dhA
                          vector<QString> &bones);
 
 void segmentBodyPoints_muscle(dhPointCloudAsVertexRef*& contactPoints,
-                              dhSkeletalSubspaceDeformation* bodySSD, dhMesh* bodyMesh,
+                              dhSkeletalSubspaceDeformation* bodySSD,
                               dhMesh* objMesh, vector<vector<QString>> color_def,
                               segment* segm);
 

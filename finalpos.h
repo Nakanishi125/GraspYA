@@ -70,7 +70,7 @@ array<T,dimensions> operator*(const double w, const array<T,dimensions>& v2){
 struct Parameter{
     double par1;    double par2;    double par3;    double par4;
     dhArmature* arm;    dhFeaturePoints* Fp;
-    dhSkeletalSubspaceDeformation* ssd;    dhMesh* handMesh;    dhMesh* objMesh;
+    dhSkeletalSubspaceDeformation* ssd;    dhMesh* objMesh;
     //ROM_eval関連
     vector<vector<QString>> jl;
     vector<vector<QString>> jb;
@@ -101,7 +101,7 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
                               dhSkeletalSubspaceDeformation* mesh1, dhMesh* mesh2);
 
 int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp,dhSkeletalSubspaceDeformation* ssd,
-                       dhMesh* handMesh, dhMesh* objMesh, int age);
+                       dhMesh* objMesh, int age);
 
 double func_estimate_PSO(const array<double,dimensions> para, Parameter pp);
 

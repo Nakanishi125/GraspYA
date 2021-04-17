@@ -57,6 +57,8 @@ void dhpluginArmInfo::initPlugin(void)
 DH_INIT_TYPE(dhArmOpe, "ArmOpe", "IElement");
 
 dhArmOpe::dhArmOpe()
+    :myArm(NULL),mySSD(NULL),myFp(NULL),
+      objFp(NULL),objMesh(NULL), tAge(20)
 {
     SET_DEFAULT_ELEM_NAME;
     this->trgA=NULL;
@@ -348,7 +350,7 @@ double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDefo
     prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
     extract_contactPoints(bodySSD, internal, bodyPoints, objectPoints);
 
-    double eval = forceClosure_eval(arm, bodySSD, bodyMesh, objMesh, ObjPs_normal, MP,
+    double eval = forceClosure_eval(arm, bodySSD, objMesh, ObjPs_normal, MP,
                                     color_def, area_to_bone, bodyPoints, coef, input_set);
     dhdelete(bodyPoints);
     dhdelete(objectPoints);
@@ -358,10 +360,10 @@ double dhArmOpe::ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDefo
 }
 
 void dhArmOpe::FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
-                                   dhMesh* handMesh, dhMesh* objMesh, int age)
+                                   dhMesh* objMesh, int age)
 {
-    FinalPostureCreate(arm, Fp, ssd, handMesh, objMesh, age);
-//    FinalPostureCreate_PSO(arm, Fp, ssd, handMesh, objMesh, age);
+    FinalPostureCreate(arm, Fp, ssd, objMesh, age);
+//    FinalPostureCreate_PSO(arm, Fp, ssd, objMesh, age);
 }
 
 QStringList dhArmOpe::ElementActionTitles()
@@ -571,41 +573,27 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
     {
         clock_t time1,time2;
         time1 = clock();
-        bool isOK,isOK2,isOK3,isOK4,isOK5,ok;
-        IDHElement* e1=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
-        if(isOK){
-            dhArmature* arm = dynamic_cast<dhArmature*>(e1);
 
-            IDHElement* e2=dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK2);
-            if(isOK2){
-                dhFeaturePoints* Fp = dynamic_cast<dhFeaturePoints*>(e2);
+//        bool isOK1,isOK2,isOK3,isOK4,isOK5,ok;
+//        if(myArm == NULL)   myArm = dynamic_cast<dhArmature*>(dhApp::elementSelectionDialog(dhArmature::type,&isOK1));
+//        if(mySSD == NULL)   mySSD = dynamic_cast<dhSkeletalSubspaceDeformation*>
+//                                    (dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK2));
+//        if(myFp == NULL)    myFp = dynamic_cast<dhFeaturePoints*>(dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK3));
+//        if(objFp == NULL)   objFp = dynamic_cast<dhFeaturePoints*>(dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK4));
+//        if(objMesh == NULL) objMesh = dynamic_cast<dhMesh*>(dhApp::elementSelectionDialog(dhMesh::type,&isOK5));
+//        tAge = QInputDialog::getInt(nullptr, tr("Input the target age"),tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
 
-                IDHElement* e3 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK3);
-                if(isOK3){
-                    dhSkeletalSubspaceDeformation* ssd = dynamic_cast<dhSkeletalSubspaceDeformation*>(e3);
-
-                    IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK4);
-                    if(isOK4){
-                        dhMesh* handMesh = dynamic_cast<dhMesh*>(e4);
-
-                        IDHElement* e5 = dhApp::elementSelectionDialog(dhMesh::type,&isOK5);
-                        if(isOK5){
-                            dhMesh* objMesh = dynamic_cast<dhMesh*>(e5);
-
-                            int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
-                                                             tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
-                            if(ok){
-                                this->FinalPosture_create(arm, Fp, ssd, handMesh, objMesh, age);
-
-                                time2 = clock();
-                                double etime = (double)(time2-time1)/1000;
-                                DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
-                            }
-                        }
-                    }
-                }
-            }
+        if(myArm!=NULL && mySSD!=NULL && myFp!=NULL && objFp!=NULL && objMesh!=NULL)
+        {
+            FinalPosture_create(myArm, myFp, mySSD, objMesh, tAge);
         }
+        else{
+            DH_LOG("cannot input elements.",0);
+        }
+
+        time2 = clock();
+        double etime = (double)(time2-time1)/1000;
+        DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
 
         return true;
     }
@@ -625,10 +613,14 @@ void dhArmOpe::ConstructObjectProperty(void)
     DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag1, dhLang::tr("Target Armature"), "class:Armature", ElemName(trgA));
     DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag1, dhLang::tr("Get Bone Num"), "button", QString());
 //    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag1, dhLang::tr("Save Armature Info in File"), "button", QString());
-    QString Tag2 = QString("Sample Action2:Plot Trajectory of the Point");
-    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Target MoCapSequence"), "class:MoCapSequence", ElemName(trgMseq));
-    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Target FPs"), "class:FeaturePoints", ElemName(this->trgFPs));
-    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Plot Trajectory of the Point"), "button", QString());
+    QString Tag2 = QString("Element settings");
+    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Hand Armature"), "class:Armature", ElemName(myArm));
+    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Hand SSD"), "class:SkeletalSubspaceDeformation", ElemName(mySSD));
+    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Hand FeaturePoints"), "class:FeaturePoints", ElemName(myFp));
+    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Object FeaturePoints"), "class:FeaturePoints", ElemName(objFp));
+    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Object Mesh"), "class:Mesh", ElemName(objMesh));
+    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Target age"), "int", tAge);
+    DH_INSERT_TAGGED_OBJECT_PROPERTY(Tag2, dhLang::tr("Synthesis FinalPosture"), "button", QString());
 }
 
 
@@ -636,7 +628,7 @@ void dhArmOpe::ConstructObjectProperty(void)
 void dhArmOpe::OnObjectPropertyUpdated(const QString& propName)
 {
     IDHElement::OnObjectPropertyUpdated(propName);
-    bool isOK;
+    bool ok;
 
     dhPropertyValue& property = mObjectPropertyMap[propName];
     if(propName == dhLang::tr("Target Armature")){
@@ -659,23 +651,37 @@ void dhArmOpe::OnObjectPropertyUpdated(const QString& propName)
 //            }
 //        }
 //    }
-    else if(propName == dhLang::tr("Target MoCapSequence")){
-        this->trgMseq = dynamic_cast<dhMoCapSequence*>(dhApp::findElement(property.value<QString>()));
+    else if(propName == dhLang::tr("Hand Armature")){
+        myArm = dynamic_cast<dhArmature*>(dhApp::findElement(property.value<QString>()));
     }
-    else if(propName == dhLang::tr("Target FPs")){
-        this->trgFPs = dynamic_cast<dhFeaturePoints*>(dhApp::findElement(property.value<QString>()));
+    else if(propName == dhLang::tr("Hand SSD")){
+        mySSD = dynamic_cast<dhSkeletalSubspaceDeformation*>(dhApp::findElement(property.value<QString>()));
     }
-    else if(propName == dhLang::tr("Plot Trajectory of the Point")){
-        bool isOK1,isOK2;
-        if(this->trgMseq==NULL) this->trgMseq=dynamic_cast<dhMoCapSequence*>(dhApp::elementSelectionDialog(dhMoCapSequence::type,&isOK1));
-        if(this->trgFPs==NULL) this->trgFPs =dynamic_cast<dhFeaturePoints*>(dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK2));
-        if(this->trgFPs!=NULL){
-            QStringList fpnames;
-            for(int i=0; i<this->trgFPs->pointCount(); i++) fpnames.append(this->trgFPs->point(i)->Name());
-            this->fpname = QInputDialog::getItem(0,"Set FP to be plotted","Select one of the names",fpnames,0);
-        }
-        if(this->trgMseq!=NULL && this->trgFPs!=NULL && !this->fpname.isEmpty()){
-            this->PlotGivenPointTrajectory(this->trgMseq,this->trgFPs,this->fpname);
+    else if(propName == dhLang::tr("Hand FeaturePoints")){
+        myFp = dynamic_cast<dhFeaturePoints*>(dhApp::findElement(property.value<QString>()));
+    }
+    else if(propName == dhLang::tr("Object FeaturePoints")){
+        objFp = dynamic_cast<dhFeaturePoints*>(dhApp::findElement(property.value<QString>()));
+    }
+    else if(propName == dhLang::tr("Object Mesh")){
+        objMesh = dynamic_cast<dhMesh*>(dhApp::findElement(property.value<QString>()));
+    }
+    else if(propName == dhLang::tr("Target age")){
+        tAge = QInputDialog::getInt(nullptr, tr("Input the target age"),
+                                         tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+    }
+    else if(propName == dhLang::tr("Synthesis FinalPosture")){
+        bool isOK1,isOK2,isOK3,isOK4,isOK5;
+        if(myArm == NULL)   myArm = dynamic_cast<dhArmature*>(dhApp::elementSelectionDialog(dhArmature::type,&isOK1));
+        if(mySSD == NULL)   mySSD = dynamic_cast<dhSkeletalSubspaceDeformation*>
+                                    (dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK2));
+        if(myFp == NULL)    myFp = dynamic_cast<dhFeaturePoints*>(dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK3));
+        if(objFp == NULL)   objFp = dynamic_cast<dhFeaturePoints*>(dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK4));
+        if(objMesh == NULL) objMesh = dynamic_cast<dhMesh*>(dhApp::elementSelectionDialog(dhMesh::type,&isOK5));
+
+        if(myArm!=NULL && mySSD!=NULL && myFp!=NULL && objFp!=NULL && objMesh!=NULL)
+        {
+            FinalPosture_create(myArm, myFp, mySSD, objMesh, tAge);
         }
 
     }

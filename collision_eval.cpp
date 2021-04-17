@@ -57,6 +57,8 @@ void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal
 
 void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh, vector<vector<QString>> input_set)
 {
+    string fn = "C:\\Users\\nakanishi\\Desktop\\seed_value.txt";
+    ofstream log(fn, ios::app);
 
     const int OBJ_X = input_set[2][1].toDouble();
     const int OBJ_Y = input_set[2][2].toDouble();
@@ -64,7 +66,9 @@ void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh, vector<v
 
     const int Number_of_Pts = 5000;
 
-    srand((unsigned int)clock());
+    unsigned int time = (unsigned int)clock();
+    log << time << endl;
+    srand(time);
     int i=0;
     while(internal->pts.size() < Number_of_Pts){
         double x = rand() % OBJ_X + 1;

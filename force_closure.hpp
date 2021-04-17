@@ -51,7 +51,7 @@ double GLPK_solve_LP2(vector<vector<double>> left, vector<double> right, vector<
                       vector<vector<double>> G, vector<vector<double>> J,vector<vector<double>> MF);
 
 double forceClosure_eval(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
-                         dhMesh* bodyMesh, dhMesh* objMesh, vector<vector<QString>> ObjPs_normal,
+                         dhMesh* objMesh, vector<vector<QString>> ObjPs_normal,
                          vector<vector<QString>> MP, vector<vector<QString>> color_def,
                          vector<vector<QString>> area_to_bone, dhPointCloudAsVertexRef* &bodyPoints,
                          double coef, vector<vector<QString>> input_set);

@@ -76,7 +76,7 @@ double func_estimate(const gsl_vector *v,void *params){
     double estimate_func =    dp->par1*coord_eval(dp->Fp, dp->ObjPs, dp->ObjPs_normal, dp->fpname)
                             + dp->par2*rom_eval(dp->arm, dp->jl, dp->jb, dp->DF, dp->as)
                             + dp->par3*collision_eval(dp->arm, dp->bodyPoints, dp->objectPoints, dp->hand_size)
-                            + dp->par4*forceClosure_eval(dp->arm, dp->ssd, dp->handMesh, dp->objMesh, dp->ObjPs_normal,
+                            + dp->par4*forceClosure_eval(dp->arm, dp->ssd, dp->objMesh, dp->ObjPs_normal,
                                                          dp->MP, dp->color_def, dp->area_to_bone, dp->bodyPoints,
                                                          dp->coef, dp->input_set);
 
@@ -179,7 +179,7 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
 }
 
 int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
-                       dhMesh* handMesh, dhMesh* objMesh, int age)
+                       dhMesh* objMesh, int age)
 {
     string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\nelder-mead.txt";
     ofstream log(fn, ios::app);
@@ -265,7 +265,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
 
 //func_estimateのパラメータ(各評価関数の全変数)
 
-    Parameter p = { 200, 1.5, 30000, 300, arm, Fp, ssd, handMesh, objMesh,
+    Parameter p = { 200, 1.5, 30000, 300, arm, Fp, ssd, objMesh,
                     joints_list, joint_bone, DF, ashape_all,               //ROM
                     ObjPs, ObjPs_normal, fpname,                           //Coordinate
                     bodyPoints, objectPoints, internal, hand_size,         //Collision
@@ -316,7 +316,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
     DH_LOG("ROM evaluation is "+QString::number(rom_eval(arm, joints_list, joint_bone, DF, ashape_all)),0);
     DH_LOG("Coordinate evaluation is "+QString::number(coord_eval(Fp, ObjPs, ObjPs_normal, fpname)),0);
     DH_LOG("Collision evaluation is "+QString::number(collision_eval(arm, bodyPoints, objectPoints, hand_size)),0);
-    DH_LOG("ForceClosure evaluation is "+QString::number(forceClosure_eval(arm, ssd, handMesh, objMesh, ObjPs_normal,MP, color_def, area_to_bone, bodyPoints,coef, input_set)),0);
+    DH_LOG("ForceClosure evaluation is "+QString::number(forceClosure_eval(arm, ssd, objMesh, ObjPs_normal,MP, color_def, area_to_bone, bodyPoints,coef, input_set)),0);
 
     DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
     DH_LOG("iter is"+QString::number(iter),0);
@@ -350,7 +350,7 @@ double func_estimate_PSO(const array<double,dimensions> para, Parameter pp){
     double estimate_func = pp.par1*coord_eval(pp.Fp, pp.ObjPs, pp.ObjPs_normal, pp.fpname)
                          + pp.par2*rom_eval(pp.arm, pp.jl, pp.jb, pp.DF, pp.as)
                          + pp.par3*collision_eval(pp.arm, pp.bodyPoints, pp.objectPoints, pp.hand_size)
-                         + pp.par4*forceClosure_eval(pp.arm, pp.ssd, pp.handMesh, pp.objMesh, pp.ObjPs_normal,
+                         + pp.par4*forceClosure_eval(pp.arm, pp.ssd, pp.objMesh, pp.ObjPs_normal,
                                                      pp.MP, pp.color_def, pp.area_to_bone, pp.bodyPoints,
                                                      pp.coef, pp.input_set);
 
@@ -560,7 +560,7 @@ void FinalPostureCreate_PSO(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubsp
     prepare_coordeval(Fp, ObjPs, ObjPs_normal, fpname);
 
 
-    Parameter pp = { 70, 2, 1000, 500, arm, Fp, ssd, handMesh, objMesh,
+    Parameter pp = { 70, 2, 1000, 500, arm, Fp, ssd, objMesh,
                      joints_list, joint_bone, DF, ashape_all,
                      ObjPs, ObjPs_normal, fpname,
                      bodyPoints, objectPoints, internal, hand_size,

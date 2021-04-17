@@ -52,6 +52,13 @@ private:
     dhMoCapSequence *trgMseq;
     QString fpname;
 
+    dhArmature *myArm;
+    dhSkeletalSubspaceDeformation *mySSD;
+    dhFeaturePoints *myFp;
+    dhFeaturePoints *objFp;
+    dhMesh *objMesh;
+    int tAge;
+
 
 public slots:
     void writeBoneNum(dhArmature *arm);
@@ -66,7 +73,7 @@ public slots:
     double ForceClosure_evaluation(dhArmature* arm, dhSkeletalSubspaceDeformation* bodySSD,
                                                            dhMesh* bodyMesh, dhMesh* objMesh, int age);
     void FinalPosture_create(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
-                             dhMesh* handMesh, dhMesh* objMesh, int age);
+                             dhMesh* objMesh, int age);
 
     virtual const bool	IsValid(void)const{ return (1); }
     virtual void Update(void){}//何もしない設定
