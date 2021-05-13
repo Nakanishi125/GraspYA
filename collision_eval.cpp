@@ -21,8 +21,8 @@ using namespace std;
 void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal, dhMesh* objMesh,
                       vector<vector<QString>> &input_set)
 {
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\log_setting.txt";
-    ofstream log(fn, ios::app);
+//    string fn = "C:\\Users\\nakanishi\\Desktop\\log_setting.txt";
+//    ofstream log(fn, ios::app);
 
     boost::property_tree::ptree pt;
     read_ini("filepath.ini", pt);
@@ -43,14 +43,17 @@ void prepare_colleval(dhArmature* arm, double &hand_size, dhPointCloud* internal
         DH_LOG("cannot read settings.csv",0);
         return ;
     }
-    for(int i=0; i<input_set.size(); i++){
-        for(int j=0; j<input_set[i].size(); j++){
-            log << input_set[i][j] << endl;
-        }
-    }
+//    for(int i=0; i<input_set.size(); i++){
+//        for(int j=0; j<input_set[i].size(); j++){
+//            log << input_set[i][j] << endl;
+//        }
+//    }
 
+//    log << "path1" << endl;
     hand_size = hand_length(arm);
+//    log << "path2" << endl;
     generate_points_inobject(internal, objMesh, input_set);
+//    log << "path3";
 }
 
 
@@ -59,6 +62,16 @@ void generate_points_inobject(dhPointCloud* &internal, dhMesh* objMesh, vector<v
 {
     string fn = "C:\\Users\\nakanishi\\Desktop\\seed_value.txt";
     ofstream log(fn, ios::app);
+
+    time_t t = time(NULL);
+    struct tm *local = localtime(&t);
+
+    log << local->tm_mon + 1; log << "/";
+    log << local->tm_mday;  log << "-";
+
+    log << local->tm_hour ; log << ":";
+    log << local->tm_min;   log << ":";
+    log << local->tm_sec;   log << " -> ";
 
     const int OBJ_X = input_set[2][1].toDouble();
     const int OBJ_Y = input_set[2][2].toDouble();

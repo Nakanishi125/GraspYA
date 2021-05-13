@@ -5,7 +5,7 @@
 #INCLUDEPATH += C:/lib64/glpk-4.55/src
 #INCLUDEPATH += C:/lib64/PQP_v1.3/include
 
-INCLUDEPATH += C:/kenkyu/GSL/include                                         #gslのインクルードパス
+INCLUDEPATH += C:/Users/nakanishi/kenkyu/GSL/include                                         #gslのインクルードパス
 
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/include/pcl-1.8"                          #以下，PCLと3rdパーティーのインクルードパス
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/3rdParty/Boost/include/boost-1_64"
@@ -15,13 +15,15 @@ INCLUDEPATH += "C:/Program Files/OpenNI2/Include"
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/3rdParty/Qhull/include"
 INCLUDEPATH += "C:/Program Files/PCL 1.8.1/3rdParty/VTK/include/vtk-8.0"
 
-INCLUDEPATH += "C:/kenkyu/glpk-5.0/src"
+INCLUDEPATH += "C:/Users/nakanishi/kenkyu/glpk-5.0/src"
+
+#############################################################################################################################
 
 #LIBS += C:/lib64/glpk-4.55/w64/glpk_4_55.lib
 #LIBS += C:/lib64/PQP_v1.3/lib/PQPvs2015.lib
 
-LIBS += "C:/kenkyu/GSL/lib/gsl/gsl.lib"                                      #gslのLibファイルリンク
-LIBS += "C:/kenkyu/GSL/lib/gsl/cblas.lib"
+LIBS += "C:/Users/nakanishi/kenkyu/GSL/lib/gsl/gsl.lib"                                      #gslのLibファイルリンク
+LIBS += "C:/Users/nakanishi/kenkyu/GSL/lib/gsl/cblas.lib"
 
 
 LIBS += "C:/Program Files/PCL 1.8.1/lib/pcl_common_release.lib"                      #以下PCLの必要なLibファイルリンク
@@ -46,7 +48,7 @@ LIBS += "C:/Program Files/PCL 1.8.1/lib/pcl_surface_release.lib"
 #LIBS += "C:/Program Files/PCL 1.8.0/lib/pcl_visualization_release.lib"
 
 
-LIBS += "C:/kenkyu/glpk-5.0/w64/glpk.lib"
+LIBS += "C:/Users/nakanishi/kenkyu/glpk-5.0/w64/glpk.lib"
 #LIBS += "C:/GnuWin32/lib/glpk-bcc.lib"
 
 
@@ -56,6 +58,7 @@ LIBS += "C:/kenkyu/glpk-5.0/w64/glpk.lib"
 #DLLDESTDIR="C:\work\project\DhaibaWorks\DHToolsM_V2_2019\DHToolsM\Plugins"
 
 HEADERS += ./dhpluginArmInfo.h
+HEADERS += ./initialpos.h
 HEADERS += ./dhcontact.h
 HEADERS += ./dhpluginArmInfo_global.h
 HEADERS += ./stdafx.h
@@ -70,6 +73,7 @@ HEADERS += ./force_closure.hpp
 
 
 SOURCES += ./dhpluginArmInfo.cpp
+SOURCES += ./initialpos.cpp
 SOURCES += ./dhcontact.cpp
 SOURCES += ./stdafx.cpp
 SOURCES += ./csv.cpp

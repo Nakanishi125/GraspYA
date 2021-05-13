@@ -6,8 +6,8 @@ TEMPLATE = lib
 
 #DESTDIR = C:/DhaibaWorksSDK2/bin/Packages/SamplePckg1/Plugins/
 #DLLDESTDIR= C:/DhaibaWorksSDK2/bin/Packages/SamplePckg1/Plugins/
-DESTDIR = C:/kenkyu/GraspYA/Plugins/
-DLLDESTDIR= C:/kenkyu/GraspYA/Plugins/
+DESTDIR = C:/Users/nakanishi/kenkyu/GraspYA/Plugins
+DLLDESTDIR= C:/Users/nakanishi/kenkyu/GraspYA/Plugins
 
 #OBJECTS_DIR = c:/temp
 #MOC_DIR = c:/temp

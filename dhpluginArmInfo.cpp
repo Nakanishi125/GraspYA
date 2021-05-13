@@ -573,27 +573,36 @@ bool dhArmOpe::OnElementActionCalled(const QString& cmd)
     {
         clock_t time1,time2;
         time1 = clock();
+        bool isOK,isOK2,isOK3,isOK4,isOK5,ok;
+        IDHElement* e1=dhApp::elementSelectionDialog(dhArmature::type,&isOK);
+        if(isOK){
+            dhArmature* arm = dynamic_cast<dhArmature*>(e1);
 
-//        bool isOK1,isOK2,isOK3,isOK4,isOK5,ok;
-//        if(myArm == NULL)   myArm = dynamic_cast<dhArmature*>(dhApp::elementSelectionDialog(dhArmature::type,&isOK1));
-//        if(mySSD == NULL)   mySSD = dynamic_cast<dhSkeletalSubspaceDeformation*>
-//                                    (dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK2));
-//        if(myFp == NULL)    myFp = dynamic_cast<dhFeaturePoints*>(dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK3));
-//        if(objFp == NULL)   objFp = dynamic_cast<dhFeaturePoints*>(dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK4));
-//        if(objMesh == NULL) objMesh = dynamic_cast<dhMesh*>(dhApp::elementSelectionDialog(dhMesh::type,&isOK5));
-//        tAge = QInputDialog::getInt(nullptr, tr("Input the target age"),tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+            IDHElement* e2=dhApp::elementSelectionDialog(dhFeaturePoints::type,&isOK2);
+            if(isOK2){
+                dhFeaturePoints* Fp = dynamic_cast<dhFeaturePoints*>(e2);
 
-        if(myArm!=NULL && mySSD!=NULL && myFp!=NULL && objFp!=NULL && objMesh!=NULL)
-        {
-            FinalPosture_create(myArm, myFp, mySSD, objMesh, tAge);
+                IDHElement* e3 = dhApp::elementSelectionDialog(dhSkeletalSubspaceDeformation::type,&isOK3);
+                if(isOK3){
+                    dhSkeletalSubspaceDeformation* ssd = dynamic_cast<dhSkeletalSubspaceDeformation*>(e3);
+
+                    IDHElement* e4 = dhApp::elementSelectionDialog(dhMesh::type,&isOK4);
+                    if(isOK4){
+                        dhMesh* handMesh = dynamic_cast<dhMesh*>(e4);
+
+                        int age = QInputDialog::getInt(nullptr, tr("Input the target age"),
+                                                         tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+                        if(ok){
+                            this->FinalPosture_create(arm, Fp, ssd, handMesh, age);
+
+                            time2 = clock();
+                            double etime = (double)(time2-time1)/1000;
+                            DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
+                        }
+                    }
+                }
+            }
         }
-        else{
-            DH_LOG("cannot input elements.",0);
-        }
-
-        time2 = clock();
-        double etime = (double)(time2-time1)/1000;
-        DH_LOG("elapsed time is "+QString::number(etime,'f',5),0);
 
         return true;
     }
@@ -668,7 +677,7 @@ void dhArmOpe::OnObjectPropertyUpdated(const QString& propName)
     }
     else if(propName == dhLang::tr("Target age")){
         tAge = QInputDialog::getInt(nullptr, tr("Input the target age"),
-                                         tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
+                                    tr("from 20 to 100 years old"), 20, 20, 100, 1, &ok);
     }
     else if(propName == dhLang::tr("Synthesis FinalPosture")){
         bool isOK1,isOK2,isOK3,isOK4,isOK5;

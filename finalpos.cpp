@@ -181,7 +181,7 @@ void estimate_armature_change(const gsl_vector *v, dhArmature* arm, dhFeaturePoi
 int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDeformation* ssd,
                        dhMesh* objMesh, int age)
 {
-    string fn = "C:\\Users\\ynunakanishi\\Desktop\\LOG\\nelder-mead.txt";
+    string fn = "C:\\Users\\nakanishi\\Desktop\\finalpos_log.txt";
     ofstream log(fn, ios::app);
 
     vector<vector<QString>> joints_list;        //ファイル類の読み込み
@@ -204,11 +204,13 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
     vector<vector<QString>> area_to_bone;
     double coef;
 
+
     prepare_romeval(joints_list, joint_bone, DF, ashape_all, age);
     prepare_coordeval(Fp, ObjPs, ObjPs_normal, fpname);
     prepare_colleval(arm, hand_size, internal, objMesh, input_set);
     prepare_forceClosure(MP, color_def, area_to_bone, coef, age);
 
+    log << "path1" << endl;
 
     map<int,QString> bone_list;
     bone_list[0] = "ROOT";     bone_list[1] = "TMCP";   bone_list[2] = "TPP";
@@ -252,6 +254,8 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
         }
     }
 
+    log << "path2" << endl;
+
 //    for(int i=0; init.size(); i++){     //初期値確認
 //        DH_LOG(QString::number(i)+": "+QString::number(init[i]),0);
 //    }
@@ -265,7 +269,7 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
 
 //func_estimateのパラメータ(各評価関数の全変数)
 
-    Parameter p = { 200, 1.5, 30000, 300, arm, Fp, ssd, objMesh,
+    Parameter p = { 300, 1.5, 50000, 150, arm, Fp, ssd, objMesh,
                     joints_list, joint_bone, DF, ashape_all,               //ROM
                     ObjPs, ObjPs_normal, fpname,                           //Coordinate
                     bodyPoints, objectPoints, internal, hand_size,         //Collision
@@ -292,6 +296,8 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
     s = gsl_multimin_fminimizer_alloc(T,x->size);
     gsl_multimin_fminimizer_set(s, &my_func, x, ss);
 
+    log << "path3" << endl;
+
     do{
         iter++;
         status = gsl_multimin_fminimizer_iterate(s);
@@ -307,9 +313,12 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
         log << "size is :";     log << size << endl;
     }while(status == GSL_CONTINUE && iter < 30000);
 
+    log << "path4" << endl;
 
     estimate_armature_change(s->x, arm, Fp, ssd, objMesh);
     dhApp::updateAllWindows();
+
+    log << "path5" << endl;
 
     //ここから評価値確認部分
     extract_contactPoints(ssd, internal, bodyPoints, objectPoints);
@@ -317,7 +326,6 @@ int FinalPostureCreate(dhArmature* arm,dhFeaturePoints* Fp, dhSkeletalSubspaceDe
     DH_LOG("Coordinate evaluation is "+QString::number(coord_eval(Fp, ObjPs, ObjPs_normal, fpname)),0);
     DH_LOG("Collision evaluation is "+QString::number(collision_eval(arm, bodyPoints, objectPoints, hand_size)),0);
     DH_LOG("ForceClosure evaluation is "+QString::number(forceClosure_eval(arm, ssd, objMesh, ObjPs_normal,MP, color_def, area_to_bone, bodyPoints,coef, input_set)),0);
-
     DH_LOG("FinalEvaluation is "+QString::number(s->fval),0);
     DH_LOG("iter is"+QString::number(iter),0);
     //ここまで
